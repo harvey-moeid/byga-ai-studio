@@ -52,7 +52,7 @@ export default function App() {
       <section className="main-panel" id="home">
         <header className="topbar">
           <div className="breadcrumb">Workspace <span>/</span> <strong>Overview</strong></div>
-          <div className="topbar-right"><span className={\`api-pill \${apiState}\`}><i />{apiState === 'checking' ? 'Checking API' : apiState === 'online' ? 'API connected' : 'API unavailable'}</span><div className="avatar">B</div></div>
+          <div className="topbar-right"><span className={`api-pill ${apiState}`}><i />{apiState === 'checking' ? 'Checking API' : apiState === 'online' ? 'API connected' : 'API unavailable'}</span><div className="avatar">B</div></div>
         </header>
 
         <div className="content" id="overview">
@@ -63,12 +63,12 @@ export default function App() {
 
           <section className="section-block">
             <div className="section-heading"><div><div className="eyebrow">PLATFORM STATUS</div><h2>Engine connections</h2></div><span className="section-note">Status integrasi aktual</span></div>
-            <div className="engine-grid">{engines.map((engine) => <article className="engine-card" key={engine.key}><div className="engine-card-top"><span className={\`engine-symbol \${engine.key}\`}>{engine.key === 'hyperframes' ? 'H' : engine.key === 'remotion' ? 'R' : 'S'}</span><span className="pending-dot" /></div><div className="engine-type">{engine.type}</div><h3>{engine.name}</h3><p>{engine.description}</p><div className="engine-status">{engine.status}</div></article>)}</div>
+            <div className="engine-grid">{engines.map((engine) => <article className="engine-card" key={engine.key}><div className="engine-card-top"><span className={`engine-symbol ${engine.key}`}>{engine.key === 'hyperframes' ? 'H' : engine.key === 'remotion' ? 'R' : 'S'}</span><span className="pending-dot" /></div><div className="engine-type">{engine.type}</div><h3>{engine.name}</h3><p>{engine.description}</p><div className="engine-status">{engine.status}</div></article>)}</div>
           </section>
 
           <section className="foundation-row">
             <article className="foundation-card"><div className="foundation-icon">⌘</div><div><div className="eyebrow">FOUNDATION</div><h3>Control plane is taking shape.</h3><p>Fondasi API, shared contracts, dan quality gates sedang disiapkan sebelum fitur produksi diaktifkan.</p></div><span className="phase-tag">PHASE 1</span></article>
-            <article className="health-card"><div className="health-head"><span>API HEALTH</span><span className={\`health-state \${apiState}\`}>{apiState === 'online' ? 'OPERATIONAL' : apiState === 'checking' ? 'CHECKING' : 'UNAVAILABLE'}</span></div><div className="health-value">{apiState === 'online' ? 'Connected' : apiState === 'checking' ? 'Checking…' : 'No connection'}</div><div className="health-foot">{checkedAt ? \`Last checked \${new Date(checkedAt).toLocaleTimeString('id-ID')}\` : 'Live status from Studio API'}</div></article>
+            <article className="health-card"><div className="health-head"><span>API HEALTH</span><span className={`health-state ${apiState}`}>{apiState === 'online' ? 'OPERATIONAL' : apiState === 'checking' ? 'CHECKING' : 'UNAVAILABLE'}</span></div><div className="health-value">{apiState === 'online' ? 'Connected' : apiState === 'checking' ? 'Checking…' : 'No connection'}</div><div className="health-foot">{checkedAt ? `Last checked ${new Date(checkedAt).toLocaleTimeString('id-ID')}` : 'Live status from Studio API'}</div></article>
           </section>
           <footer className="footer"><span>© 2026 BYGA.AI STUDIO</span><span>BUILD ANYWHERE <b>·</b> BUILT FOR CREATORS</span></footer>
         </div>

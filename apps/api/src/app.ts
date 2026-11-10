@@ -6,7 +6,7 @@ type Variables = { requestId: string };
 export const app = new Hono<{ Variables: Variables }>();
 
 app.use('*', async (c, next) => {
-  const requestId = \`req_\${crypto.randomUUID()}\`;
+  const requestId = `req_${crypto.randomUUID()}`;
   c.set('requestId', requestId);
   c.header('X-Request-Id', requestId);
   c.header('X-Content-Type-Options', 'nosniff');
