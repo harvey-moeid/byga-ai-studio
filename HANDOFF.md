@@ -3,86 +3,60 @@
 **Last verified:** 2026-11-11  
 **Repository:** `harvey-moeid/byga-ai-studio`  
 **Active branch:** `feat/phase-1-foundation`  
-**Phase:** Phase 1 — Repository Foundation (implementation delivered; review remediation and reproducibility hardening remain)  
-**Next phase:** Phase 2 — Core Platform (not started)
+**Active phase:** Phase 1 — Repository Foundation; implementation delivered, review remediation and reproducibility hardening remain.  
+**Next phase:** Phase 2 — Core Platform; not started.
 
-> Point-in-time handoff based on GitHub branch, commit, PR, file and Actions inspection. Re-check GitHub before further changes. A green CI run does not mean the PR is merged or production-ready.
+> Point-in-time record from GitHub inspection. Always re-check branch HEAD, PR state and Actions before continuing. Green CI does not mean merged or production-ready.
 
----
-
-## 1. GitHub state at handoff
+## 1. GitHub state
 
 ### Branches
-
-| Branch | SHA at last branch inspection | Purpose |
+| Branch | SHA at last inspection | Purpose |
 |---|---|---|
-| `main` | `86d93efce6237ee5678ce34b7244b4bdd5d1418d` | Repository bootstrap; unchanged |
+| `main` | `86d93efce6237ee5678ce34b7244b4bdd5d1418d` | Bootstrap; unchanged |
 | `docs/phase-0-foundation` | `5e9ddcb5cd39f6b32782d386429fc482e542ea7d` | Phase 0 audit |
-| `feat/phase-1-foundation` | `9b7ec98459738d9f115379aedf854623f767acab` | Phase 1 implementation before handoff documentation |
+| `feat/phase-1-foundation` | `fb02d48b400ea89da9720d425ffa07e621a9206e` | Phase 1 + handoff docs before this final reconciliation |
 
-The handoff file was first added in commit `e0aba0ce0001e47b2b710a935e1d71f0a1570b70`. This document was then corrected to include that commit and the post-handoff compare. Fetch the current branch HEAD after this documentation update; do not infer the final SHA from an older entry in this file.
+This final handoff reconciliation is itself a new documentation-only commit. Fetch the branch HEAD after this commit for the current exact SHA.
 
 ### Pull requests
-
-| PR | Branch → base | State | Notes |
+| PR | Branch → base | State | Details |
 |---|---|---|---|
-| [#1 Phase 0 docs](https://github.com/harvey-moeid/byga-ai-studio/pull/1) | `docs/phase-0-foundation` → `main` | Open; previously marked Draft | 14 commits ahead of main; no CI workflow/checks on this branch |
-| [#2 Phase 1 foundation](https://github.com/harvey-moeid/byga-ai-studio/pull/2) | `feat/phase-1-foundation` → `docs/phase-0-foundation` | Open; Ready for review | Stacked PR; 8 commits ahead of Phase 0 after handoff commit |
+| [#1 Phase 0](https://github.com/harvey-moeid/byga-ai-studio/pull/1) | `docs/phase-0-foundation` → `main` | Open; previously marked Draft | 14 commits ahead of main; no CI workflow/checks |
+| [#2 Phase 1](https://github.com/harvey-moeid/byga-ai-studio/pull/2) | `feat/phase-1-foundation` → `docs/phase-0-foundation` | Open; ready for review | GitHub last reported mergeable; 9 commits and 28 changed files before this final reconciliation |
 
-GitHub reported PR #1 and PR #2 as mergeable when inspected. No merge was performed. **Do not merge PR #2 before PR #1.** After Phase 0 is merged, retarget PR #2 to `main`, inspect the changed-file diff, and rerun checks before considering merge.
+PR #2 is stacked on PR #1. Do not merge PR #2 before PR #1. After Phase 0 merges, retarget PR #2 to `main`, inspect the new diff, and rerun CI. Neither PR has been merged.
 
-### GitHub Actions
-
+### CI and test evidence
 Workflow: `.github/workflows/ci.yml`
 
-Latest run verified at inspection:
-- Run #10: [42921273653](https://github.com/harvey-moeid/byga-ai-studio/actions/runs/42921273653)
-- Commit: `9b7ec98459738d9f115379aedf854623f767acab`
+Latest verified run at this inspection:
+- Run #12: [42921876185](https://github.com/harvey-moeid/byga-ai-studio/actions/runs/42921876185)
+- Commit: `fb02d48b400ea89da9720d425ffa07e621a9206e`
 - Conclusion: **success**
 - Job: `Quality gates`
 
-Successful steps: dependency installation, ESLint, TypeScript typecheck, Vitest unit tests, Vite production build, Wrangler dry-run build, and `npm audit --audit-level=high`.
+All steps passed: dependency installation, ESLint, TypeScript typecheck, Vitest unit tests, Vite production build, Wrangler dry-run build, and `npm audit --audit-level=high`.
 
-Recent history observed: #10 success, #9 cancelled, #8 success, #7 success, #6 failure, #5 failure, #4 failure, #3 failure, #2 cancelled, #1 failure. Earlier failures were investigated and addressed; they are historical, not current failures in run #10.
+Run #10 (commit `9b7ec98...`) also passed. History observed: #10 success, #9 cancelled, #8 success, #7 success, #6 failure, #5 failure, #4 failure, #3 failure, #2 cancelled, #1 failure; after handoff commits, #11 in progress and #13 cancelled, #12 success. Earlier failures were investigated and corrected. Run #12 verified commit `fb02d48...`; this final documentation-only update needs a fresh CI status check.
 
-**Important verification boundary:** run #10 was on commit `9b7ec98...`, before the documentation-only HANDOFF commit(s). The CI status for the final handoff HEAD must be checked separately. No code change was made in the handoff-only commit.
+PR #1 has no CI workflow/checks. Its docs were read back from GitHub; tests/lint/typecheck/build were not run.
 
-PR #1 has no CI workflow/checks on its branch. Documentation was read back from GitHub; lint/typecheck/test/build were not run because no workflow existed there.
+### Review feedback
+PR #2 has one Codex review submission (`COMMENTED`) and **one unresolved, non-outdated P2 review thread**:
+- File: `apps/web/src/App.tsx`, line 18.
+- Finding: `vite.config.ts` has no `/api` proxy. With `npm run dev` and `npm run dev:api`, browser fetch to `/api/v1/health` reaches Vite (5173), not Wrangler, so the dashboard can incorrectly show API unavailable.
+- Fix: proxy `/api` to Wrangler dev server (default usually 8787; confirm or set explicitly), test both processes, then resolve thread only after verification.
+PR #1 has no reviews or inline review threads.
 
-### Reviews and unresolved feedback
-
-PR #2:
-- One Codex review submission, state `COMMENTED`.
-- One unresolved, non-outdated inline review thread:
-  - File: `apps/web/src/App.tsx`, line 18
-  - Priority: P2
-  - Finding: Vite frontend requests `/api/v1/health` on port 5173, but `apps/web/vite.config.ts` has no `/api` proxy to Wrangler. With documented separate `npm run dev` and `npm run dev:api`, the browser request reaches Vite, so UI can report API unavailable while Wrangler is running.
-  - Remediation: configure Vite dev proxy to Worker (Wrangler default port is normally 8787; confirm or set explicitly), test both processes together, and resolve the review thread only after verification.
-- PR #1 had no review submissions or inline review threads at time of inspection.
-
----
-
-## 2. Phase and subphase status
+## 2. Phase and subphase progress
 
 ### Phase 0 — Discovery and API contract audit
+**Status:** source-level audit documented; runtime and approval gates remain open.
 
-**Status:** source-level audit documented; runtime verification and approval gates remain open.
+Completed: PRD, architecture, API contract register, integration matrix, source-evidence audit, risk register; inspected MCPNEW → HyperFrames → Remotion → Suara.
 
-Completed/documented:
-- Source-level inspection order: MCPNEW → HyperFrames → Remotion → Suara.
-- Product requirements, architecture, API contract register, integration matrix, source-evidence audit and risk register.
-- Legacy integration boundaries and known authentication, route, storage and licensing risks.
-
-Remaining Phase 0 gates:
-- Runtime MCP/OAuth handshake and client/tool invocation verification.
-- Confirm exact HyperFrames public base URL.
-- Authorized non-mutating runtime health checks where available.
-- Explicitly approved test submissions for legacy engines, if required.
-- Verify output retrieval/access.
-- Resolve Suara OmniVoice CC-BY-NC model-weight restriction before commercial enablement; obtain rights-compatible model or permission.
-- Verify Remotion integration security/authentication before enabling it.
-
-PR #1 files (8):
+PR #1 changed files (8):
 - `PRD.md`
 - `SECURITY.md`
 - `docs/API-CONTRACT.md`
@@ -92,58 +66,50 @@ PR #1 files (8):
 - `docs/PHASE-0-AUDIT.md`
 - `docs/RISK-REGISTER.md`
 
+Open Phase 0 gates:
+- Runtime MCP/OAuth handshake and client/tool invocation.
+- Exact HyperFrames public base URL.
+- Authorized non-mutating runtime health checks where available.
+- Explicitly approved legacy test submissions if required; output retrieval/access verification.
+- Suara OmniVoice pretrained weights are CC-BY-NC: commercial enablement blocked pending rights-compatible model or permission.
+- Verify Remotion integration security/authentication before enabling it.
+
 ### Phase 1 — Repository Foundation
+**Status:** foundation implemented; latest verified code CI passed; review and reproducibility follow-ups open.
 
-**Status:** foundation implemented; latest code CI green; review finding and reproducibility/security follow-ups remain open.
-
-Subphase 1.1 — Workspace and app skeleton: **implemented**
+**1.1 Workspace/app skeleton — implemented**
 - npm workspaces: `apps/web`, `apps/api`, `packages/contracts`.
-- React + TypeScript + Vite frontend.
-- Hono API Worker and `GET /api/v1/health`.
-- Shared Zod schemas and normalized engine/job state types.
-- Responsive dark BYGA Studio overview shell with explicitly disabled/unverified integration states.
+- React + TypeScript + Vite frontend; responsive dark Studio overview.
+- Hono Cloudflare Worker with `GET /api/v1/health`, request ID and structured error envelope.
+- Shared Zod schemas for project input, engines, job states, health and errors.
 
-Subphase 1.2 — Quality gates: **implemented; run #10 passed**
-- Strict TypeScript configs, ESLint flat config and Vitest tests.
-- GitHub Actions CI with read-only repository permission and concurrency cancellation.
-- Wrangler `deploy --dry-run` as build validation only.
-- npm audit threshold high.
+**1.2 Quality gates — implemented; run #12 passed**
+- Strict TypeScript, ESLint, Vitest.
+- GitHub Actions CI, read-only repository permission, concurrency cancellation.
+- Vite build and Wrangler dry-run; npm audit threshold high.
 
-Subphase 1.3 — Review remediation: **not complete**
-- Fix the unresolved P2 Vite proxy finding.
-- Verify local frontend-to-Worker health request.
-- Resolve the GitHub review thread only after the fix is proven.
+**1.3 Review remediation — incomplete**
+- Fix Vite-to-Wrangler dev proxy finding.
+- Verify local frontend-to-Worker health path.
+- Resolve P2 thread only after proof.
 
-Subphase 1.4 — Reproducible install/security coverage: **not complete**
-- No `package-lock.json` exists on Phase 1 branch.
-- CI uses `npm install`, not `npm ci`; dependencies are not pinned by a committed lockfile.
-- CI runs `npm audit --audit-level=high`, but has no dedicated secret-scanning step, although the implementation plan mentions secret scanning.
-- Local npm registry resolution timed out in the authoring environment; GitHub-hosted Actions performed the verified checks.
+**1.4 Reproducible install/security coverage — incomplete**
+- No `package-lock.json`.
+- CI uses `npm install`, not `npm ci`; install is not lockfile-reproducible.
+- No dedicated secret-scanning step in current CI, despite implementation plan mentioning secret scanning.
+- Local npm registry resolution timed out in authoring environment; GitHub-hosted Actions executed the passing checks.
 
-Subphase 1.5 — Phase 1 PR integration: **pending**
-- PR #2 remains open and targets Phase 0 branch.
-- PR #1 must be handled first.
-- Neither PR has been merged.
+**1.5 PR integration — pending**
+- PR #2 remains open and based on Phase 0.
+- PR #1 must be handled first; no merge performed.
 
 ### Phase 2 — Core Platform
-
 **Status:** not started.
-
-Planned scope:
-- Project CRUD and access boundaries.
-- Asset metadata/library design.
-- Normalized job center.
-- Engine registry, health and feature flags.
-- Mock adapters and complete mock workflow.
-- Mobile acceptance.
-
-Do not start live engine adapters in Phase 2. Phase 3 is for provider adapters after contracts, auth, licensing and output access are verified.
-
----
+Scope: project CRUD/access boundaries, asset metadata/library, normalized job center, engine registry/health/feature flags, mock adapters, complete mock workflow, mobile acceptance. No live engine adapter work until Phase 3 and until contracts/auth/licensing/output access are verified.
 
 ## 3. Phase 1 changed files
 
-Compare `docs/phase-0-foundation...feat/phase-1-foundation` after adding HANDOFF showed **28 changed files** (the first 27 Phase 1 files plus this handoff). PR #2 had 7 implementation commits before HANDOFF and 8 commits after its initial handoff commit.
+GitHub compare `docs/phase-0-foundation...feat/phase-1-foundation` showed 28 files after HANDOFF was added (27 implementation files + `HANDOFF.md`). PR #2 metadata last showed 28 changed files, 9 commits, 791 additions and 31 deletions before this final reconciliation commit.
 
 Files:
 - `.github/workflows/ci.yml`
@@ -175,82 +141,70 @@ Files:
 - `tsconfig.json`
 - `vitest.config.ts`
 
-### Phase 1 commit history (newest first, at inspection)
+Key Phase 1 commits:
+- `1d0a4d5...` — initial Phase 1 monorepo foundation.
+- `05c8e0832219a52fe0570ba943375f7ca65d68ab` — install dependencies before CI gates.
+- `db977d7...` — fix escaped template literals.
+- `082aca5...` — add manual CI reruns.
+- `579a8b0...` — upgrade vulnerable dependency ranges.
+- `b0e3e85929a12a3495836808addbd7e0fa0e5a1f` — pin available TypeScript ESLint release and patched minimatch.
+- `9b7ec98459738d9f115379aedf854623f767acab` — update plan and deduplicate CI runs.
+- `e0aba0ce0001e47b2b710a935e1d71f0a1570b70` — first HANDOFF.md commit.
+- `fb02d48b400ea89da9720d425ffa07e621a9206e` — reconcile handoff with GitHub state.
 
-- `e0aba0ce0001e47b2b710a935e1d71f0a1570b70` — docs: add verified BYGA AI Studio session handoff
-- `9b7ec98459738d9f115379aedf854623f767acab` — docs: align workspace plan and deduplicate PR CI runs
-- `b0e3e85929a12a3495836808addbd7e0fa0e5a1f` — fix: pin available TypeScript ESLint release and patched minimatch
-- `579a8b0...` — security: upgrade vulnerable test and validation dependencies
-- `082aca5...` — ci: support manual quality-gate reruns
-- `db977d7...` — fix: correct template literals in app and CI sources
-- `05c8e0832219a52fe0570ba943375f7ca65d68ab` — ci: install workspace dependencies before quality gates
-- `1d0a4d5...` — feat: establish phase 1 monorepo foundation
+Earlier abbreviated SHAs are display references; fetch full SHA from GitHub before using them in API operations.
 
-Ellipses denote abbreviated SHAs; fetch full commit SHAs from GitHub before using them in API operations.
-
----
-
-## 4. Technical decisions and hard boundaries
+## 4. Technical decisions and boundaries
 
 ### Decisions
-- BYGA AI Studio is a control plane; do not merge legacy engine codebases into this repository.
-- Web: React + TypeScript + Vite.
-- API: Cloudflare Workers + Hono.
-- Shared contracts: Zod.
-- npm workspaces selected because pnpm was unavailable in the execution environment. Revisit only with a deliberate migration plan.
-- Vitest for unit tests; ESLint and strict TypeScript for quality gates.
-- R2 for Studio-owned assets only after storage design/approval; KV for ephemeral state; D1 only when persistence/query requirements justify it.
-- Studio API health is not external engine health.
-- Provider cards remain disabled/unverified until adapters are implemented and tested.
-- Production-only deployment policy; no preview/staging.
-- Wrangler `workers_dev: false`; no production hostname, account ID, route, binding or resource ID guessed.
+- BYGA AI Studio is a control plane; legacy engine repositories stay independent.
+- Web: React + TypeScript + Vite. API: Cloudflare Workers + Hono. Contracts: Zod.
+- npm workspaces selected because pnpm was unavailable in the execution environment; migrate only deliberately.
+- Vitest, ESLint, strict TypeScript.
+- R2 for Studio-owned assets only after storage design/approval; KV for ephemeral state; D1 only when justified.
+- Studio API health is not provider health. Provider cards remain disabled/unverified until real adapters are tested.
+- Production-only policy; no preview/staging. Wrangler `workers_dev: false`; no guessed domains, account IDs, routes, bindings or resource IDs.
 
-### Non-negotiable boundaries
-- Do not modify MCPNEW, HyperFrames, Remotion or Suara repositories.
-- Do not trigger legacy render/audio workflows, submit jobs, upload assets, cancel jobs, write legacy databases/storage, change secrets/configuration or deploy legacy services.
-- Do not create/modify Cloudflare resources, secrets, domains or production routes without explicit owner approval.
-- **Do not deploy BYGA AI Studio.** User explicitly prohibited deployment for this handoff.
-- No direct commits to `main`; use feature branch and PR.
-- Do not merge PR #1 or #2 unless separately authorized.
-- If integration requires legacy write or production mutation, stop and request separate approval.
-- Never represent mock status as live provider health.
+### Hard boundaries
+- Do not modify MCPNEW, HyperFrames, Remotion or Suara.
+- Do not dispatch legacy jobs, submit renders/audio, upload/cancel assets/jobs, write legacy DB/storage, change legacy secrets/config, or deploy legacy services.
+- Do not create/change Cloudflare resources, secrets, domains or production routes without explicit approval.
+- **Do not deploy BYGA AI Studio**; user explicitly prohibited deployment for this handoff.
+- No direct commits to `main`; use branch + PR.
+- Do not merge PR #1/#2 without separate authorization.
+- Stop and ask approval if integration requires legacy writes or production mutations.
+- Never present mock data/status as live provider health.
 
----
+## 5. Outstanding issues / errors
 
-## 5. Known gaps and errors to carry forward
+1. P2 local dev routing: missing Vite `/api` proxy; unresolved Codex thread.
+2. No package lockfile; CI not using `npm ci`.
+3. No secret-scanning step, despite plan mentioning it.
+4. `docs/PHASE-1-FOUNDATION.md` has stale verification text and unchecked acceptance boxes although run #12 passed.
+5. No local Vite-to-Worker smoke test recorded.
+6. Phase 0 runtime/auth/URL/output/licensing gates remain open.
+7. Authentication, project persistence, asset storage, job persistence, engine adapters and production deployment are not implemented by design in Phase 1.
 
-1. **P2 local development routing defect:** no Vite `/api` proxy to Wrangler; one unresolved Codex review thread.
-2. **No package lockfile:** install is not reproducible with `npm ci`.
-3. **No secret scanning step:** current CI workflow does not include one, despite the Phase 1 plan mentioning it.
-4. **Stale Phase 1 acceptance checklist:** `docs/PHASE-1-FOUNDATION.md` still says CI verification pending and checkboxes remain unchecked, although run #10 passed.
-5. **No local end-to-end smoke test recorded:** Actions verified lint/typecheck/unit tests/build/audit, not Vite-to-Worker local routing.
-6. **Phase 0 runtime gates remain open:** OAuth/MCP, HyperFrames URL, approved test jobs/output retrieval and licensing.
-7. **Not implemented by design in Phase 1:** authentication, project persistence, asset storage, job persistence, engine adapters and production deployment.
-
-No failing checks remain in latest code run #10. Earlier failed runs are historical; do not report them as current failures.
-
----
+No failing checks remain in run #12. Historical failures are not current failures.
 
 ## 6. Single recommended next action
 
-**Fix the unresolved P2 local development proxy finding on `feat/phase-1-foundation`.**
+**Fix the unresolved P2 Vite dev proxy finding on `feat/phase-1-foundation`.**
 
-Confirm Wrangler's dev port, configure Vite `server.proxy` for `/api` to the Worker, and add a small verification (or explicit smoke-test steps) proving `npm run dev` + `npm run dev:api` returns valid `/api/v1/health` through Vite. Run lint, typecheck, tests and build; push to the same branch; rerun CI; resolve the Codex thread only after verification.
+Confirm Wrangler dev port, add Vite `server.proxy` for `/api`, and verify that running `npm run dev` plus `npm run dev:api` returns valid `/api/v1/health` through Vite. Add a smoke test or explicit repeatable test steps. Run lint, typecheck, tests and build; push to the same branch; rerun CI; resolve the Codex thread only after verification.
 
-Afterward, separately add the committed lockfile + `npm ci` and secret scanning, and align the Phase 1 acceptance checklist. Do not begin Phase 2 until review findings and PR sequencing are addressed.
-
----
+Then separately add `package-lock.json` + `npm ci`, add secret scanning, and align the Phase 1 acceptance checklist. Do not start Phase 2 until review findings and PR sequencing are addressed.
 
 ## 7. Resume checklist
 
-- [ ] Re-read this file and verify current branch/PR state from GitHub.
-- [ ] Confirm PR #1 and PR #2 head SHAs have not moved.
-- [ ] Fix Vite-to-Worker dev proxy and verify local health path.
-- [ ] Run all CI quality gates and inspect full job result on the final code commit.
-- [ ] Resolve the P2 review thread only after the fix is proven.
-- [ ] Add committed npm lockfile and switch CI to `npm ci`.
-- [ ] Add secret scanning and align Phase 1 docs/checklist.
+- [ ] Re-read this file and verify branch/PR/CI state from GitHub.
+- [ ] Confirm PR #1/#2 head SHAs have not moved.
+- [ ] Fix and verify Vite-to-Worker dev proxy.
+- [ ] Run all quality gates on final code commit.
+- [ ] Resolve P2 thread only after verified fix.
+- [ ] Add lockfile and use `npm ci`.
+- [ ] Add secret scanning and update stale Phase 1 docs.
 - [ ] Re-check Phase 0 runtime/licensing gates.
-- [ ] Obtain approval before any merge or deployment.
+- [ ] Obtain approval before merge or deployment.
 
-**End-of-session status:** Phase 1 foundation implemented; latest code CI run #10 is green. PR #2 still has an unresolved review finding and reproducibility/security-coverage follow-ups. Neither PR is merged. No deployment was performed.
+**End-of-session status:** Phase 1 foundation implemented; latest verified CI run #12 passed on `fb02d48...`. PR #2 remains open with unresolved P2 feedback and reproducibility/security follow-ups. Neither PR is merged. No deployment was performed.
