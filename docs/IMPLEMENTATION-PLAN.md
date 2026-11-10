@@ -14,13 +14,13 @@ Inspect actual routes, Worker handlers, workflow dispatch contracts, authenticat
 
 ## Phase 1 — Repository foundation
 
-Establish pnpm workspace and minimal monorepo layout; TypeScript, lint, formatting, test runner and schema validation; frontend shell and API Worker skeleton; shared types and errors; CI for install, lint, typecheck, unit tests, build, dependency checks and secret scanning.
+Establish npm workspace and minimal monorepo layout; TypeScript, lint, formatting, test runner and schema validation; frontend shell and API Worker skeleton; shared types and errors; CI for install, lint, typecheck, unit tests, build, dependency checks and secret scanning.
 
-**Implementation progress (2026-11-11):** initial foundation committed on `feat/phase-1-foundation`: npm workspaces (selected because pnpm was not installed in the execution environment), React/Vite frontend shell, Hono Worker health endpoint, shared Zod contracts, Vitest tests, ESLint/strict TypeScript and GitHub Actions CI. Production deployment is disabled. Provider adapters, auth, persistent data and legacy calls are intentionally not implemented.
+**Implementation progress (2026-11-11):** initial foundation committed on `feat/phase-1-foundation`: npm workspaces, React/Vite frontend shell, Hono Worker health endpoint, shared Zod contracts, Vitest tests, ESLint/strict TypeScript and GitHub Actions CI. Production deployment is disabled. Provider adapters, auth, persistent data and legacy calls are intentionally not implemented.
 
-**Verification pending:** GitHub Actions CI must validate dependency resolution, lint, typecheck, unit tests, Vite build, Wrangler dry-run and dependency audit. No lockfile could be generated in the current environment because npm registry resolution timed out; CI currently runs `npm install` before audit rather than claiming a lockfile-based reproducible install. This is a known foundation gap to resolve after the first CI run.
+**Verification:** GitHub Actions run #8 passed dependency installation, lint, typecheck, unit tests, Vite build, Wrangler dry-run and npm audit. See PR #2. Local npm registry resolution timed out in the authoring environment; CI checks ran on GitHub-hosted runners. A committed package lockfile remains a follow-up; CI currently uses npm install rather than npm ci.
 
-**Exit gate:** clean CI; no production deployment.
+**Exit gate:** CI quality gates pass; no production deployment.
 
 ## Phase 2 — Core platform
 
