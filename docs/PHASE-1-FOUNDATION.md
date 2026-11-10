@@ -37,7 +37,7 @@ The frontend labels all provider connections as not enabled. Suara remains block
 
 ## Acceptance / verification
 
-- [ ] Lockfile-reproducible install (`package-lock.json` + `npm ci`) — pending.
+- [x] Lockfile-reproducible install (`package-lock.json` + `npm ci`) — verified locally and in CI run #20 on `58ba31d`: https://github.com/harvey-moeid/byga-ai-studio/actions/runs/42924941808
 - [x] ESLint passes.
 - [x] TypeScript checks pass for web, API and shared contracts.
 - [x] Unit tests pass (6 tests).
