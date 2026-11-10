@@ -40,7 +40,7 @@ docs/
 Requirements: Node.js 22+ and npm 10+.
 
 ```bash
-npm install
+npm ci                                 # reproducible install from package-lock.json (use npm install only when changing dependencies)
 npm run build --workspace=@byga/web   # once; Wrangler serves apps/web/dist as assets
 npm run dev:api                        # Wrangler on 127.0.0.1:8787
 npm run dev                            # Vite on 5173, proxies /api to Wrangler

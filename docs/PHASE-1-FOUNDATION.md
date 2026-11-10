@@ -1,6 +1,6 @@
 # Phase 1 — Repository Foundation
 
-**Status:** implementation delivered; review remediation (dev proxy) and secret scanning added; lockfile/`npm ci` still pending. Final CI verification of the PR head is recorded in `HANDOFF.md`.
+**Status:** implementation delivered; review remediation (dev proxy) and secret scanning added; lockfile committed and CI uses `npm ci`. Final CI verification of the PR head is recorded in `HANDOFF.md`.
 
 ## Scope delivered
 
@@ -25,7 +25,7 @@ The frontend labels all provider connections as not enabled. Suara remains block
 
 ## Local development
 
-- `npm install` (switch to `npm ci` once `package-lock.json` is committed)
+- `npm ci` (reproducible install from the committed `package-lock.json`; use `npm install` only when changing dependencies, then commit the updated lockfile)
 - `npm run build --workspace=@byga/web` once (Wrangler serves `apps/web/dist` as assets)
 - `npm run dev:api` — Wrangler API Worker on `127.0.0.1:8787`
 - `npm run dev` — Vite frontend on `5173`; proxies `/api` to Wrangler (override with `BYGA_API_ORIGIN`)
