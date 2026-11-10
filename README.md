@@ -2,46 +2,78 @@
 
 Unified workspace for AI-assisted audio and video production.
 
-> **Status:** Discovery / foundation phase  
-> **Visibility:** This repository is currently public; repository owner may switch it to private.  
-> **Deployment policy:** Production only. No preview or staging deployments.
+> **Current status:** Phase 1 — repository foundation.  
+> **Deployment policy:** Production only; no preview/staging deployment. Production release requires explicit owner approval.
 
 ## Product direction
 
-BYGA AI Studio brings four existing systems into one workspace through isolated, API-first adapters:
+BYGA AI Studio is the control plane for projects, assets, workflows and jobs across independent audio/video engines. It will connect to MCPNEW, HyperFrames, Remotion and Suara through isolated adapters only after their contracts, authentication, output access and licensing are verified.
 
-| System | Responsibility |
-|---|---|
-| MCPNEW | Tool connectivity and orchestration |
-| HyperFrames | HTML/CSS/GSAP video rendering |
-| Remotion | React-based video rendering |
-| Suara | Audio, speech and voice generation |
+The four legacy repositories remain independent and must not be modified by work in this repository.
 
-The four existing repositories remain independent and must not be modified by work in this repository.
+## Stack
 
-## Non-negotiable integration rules
+- Web: React, TypeScript, Vite
+- API: Cloudflare Workers, Hono
+- Contracts: Zod
+- Tests: Vitest
+- Workspace: npm workspaces
+- CI: GitHub Actions
 
-- All new platform code and documentation live in this repository.
-- Do not commit, open PRs, dispatch workflows, edit secrets, change configuration, or deploy to the four legacy repositories without separate explicit approval.
-- Integrate through verified API contracts; do not assume undocumented routes or payloads.
-- Keep adapters isolated and independently feature-flagged.
-- Existing standalone applications must remain usable if this studio is unavailable.
-- Heavy rendering stays on GitHub Actions runners or the engine's existing rendering infrastructure, not Cloudflare Worker CPU.
-- Never expose credentials to the browser or commit secrets.
-- Deploy only to production after explicit release approval.
+## Repository layout
+
+\`\`\`text
+apps/
+  api/                 Hono Worker and Wrangler configuration
+  web/                 React + Vite frontend
+packages/
+  contracts/           Shared Zod schemas and TypeScript types
+docs/
+  PHASE-1-FOUNDATION.md
+  ...                  Product, architecture and integration audits
+.github/workflows/
+  ci.yml
+\`\`\`
+
+## Local development
+
+Requirements: Node.js 22+ and npm 10+.
+
+\`\`\`bash
+npm install
+npm run dev
+npm run dev:api
+\`\`\`
+
+The frontend uses the same-origin \`/api/v1/health\` endpoint. Run quality checks with:
+
+\`\`\`bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+\`\`\`
+
+\`npm run build\` builds the web app and runs a Wrangler dry run. It does not deploy.
+
+## Integration safety
+
+- Provider adapters are not enabled in Phase 1.
+- No provider credentials are stored in frontend code.
+- No external render/audio submit, asset upload, cancellation or workflow dispatch is performed.
+- Studio health is not a proxy for legacy provider health.
+- No production domain, Cloudflare account ID, resource ID or secret is guessed.
+- Do not change MCPNEW, HyperFrames, Remotion or Suara repositories without separate approval.
 
 ## Documentation
 
 - [Product requirements](PRD.md)
+- [Phase 1 foundation](docs/PHASE-1-FOUNDATION.md)
 - [Implementation plan](docs/IMPLEMENTATION-PLAN.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Integration matrix](docs/INTEGRATION-MATRIX.md)
 - [API contract status](docs/API-CONTRACT.md)
 - [Security policy](SECURITY.md)
-
-## Current stage
-
-Phase 0 — discovery and contract verification. No production integrations or deployments are authorized by this documentation commit.
 
 ## License
 
