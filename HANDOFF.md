@@ -15,7 +15,7 @@
 |---|---|---|
 | `main` | `86d93efce6237ee5678ce34b7244b4bdd5d1418d` | Bootstrap; unchanged |
 | `docs/phase-0-foundation` | `5e9ddcb5cd39f6b32782d386429fc482e542ea7d` | Phase 0 audit |
-| `feat/phase-1-foundation` | code commit `839adaaa1fa8a4b2e81a3eb03138c268c686ab38`, followed by this HANDOFF-only commit | Phase 1 |
+| `feat/phase-1-foundation` | last code commit `839adaaa1fa8a4b2e81a3eb03138c268c686ab38`; handoff commit `2fa416f081c3f42b6349bdf8c428da84cb253c64`; then this HANDOFF-only refresh | Phase 1 |
 
 Fetch branch HEAD for the exact current SHA; this file cannot contain the SHA of its own commit.
 
@@ -30,17 +30,16 @@ Do not merge PR #2 before PR #1. After Phase 0 merges, retarget PR #2 to `main`,
 ### CI / verification
 Workflow: `.github/workflows/ci.yml`
 
-Latest verified run on code commit `839adaa...`:
-- Run #17: https://github.com/harvey-moeid/byga-ai-studio/actions/runs/42923308158
-- Conclusion: **success**; job `Quality gates`; every step succeeded: secret scanning (gitleaks), install, ESLint, typecheck, Vitest, build (Vite + Wrangler dry-run), dev proxy smoke test (Vite -> Wrangler), `npm audit --audit-level=high`.
-- Run #16 (success) covered the earlier HANDOFF-only head `2080c89`.
+- Run #17 (success) on code commit `839adaa...`: https://github.com/harvey-moeid/byga-ai-studio/actions/runs/42923308158 — every step succeeded: secret scanning (gitleaks), install, ESLint, typecheck, Vitest, build (Vite + Wrangler dry-run), dev proxy smoke test (Vite -> Wrangler), `npm audit --audit-level=high`.
+- Run #18 (success) on handoff commit `2fa416f...`: https://github.com/harvey-moeid/byga-ai-studio/actions/runs/42924080025
+- Run #16 (success) covered the earlier handoff-only head `2080c89`.
 
-This HANDOFF-only commit is after `839adaa`; check its own Actions run on resume.
+This HANDOFF-only refresh is after `2fa416f`; check its own Actions run on resume (not verified at time of writing).
 
 Local verification (sandbox, Node 22.23, npm 10.9, wrangler 4.160, workerd 2026-11-10): clean install, lint, typecheck, 6 unit tests, build, `npm audit` (0 vulnerabilities) and `npm run smoke:dev` all passed.
 
 ### Reviews
-PR #2 has one Codex review (`COMMENTED`) with one P2 inline thread on `apps/web/src/App.tsx` line 18 (no `/api` proxy). **Fix is pushed and verified (local smoke + CI run #17), but the thread is NOT resolved** — the available tools cannot resolve review threads; resolve it manually on GitHub or reply with the evidence above. PR #1 has no review threads.
+PR #2 has one Codex review (`COMMENTED`) with one P2 inline thread on `apps/web/src/App.tsx` line 18 (no `/api` proxy). **Fix is pushed and verified (local smoke + CI runs #17/#18), but the thread is NOT resolved** — the available tools cannot resolve review threads; resolve it manually on GitHub or reply with the evidence above. PR #1 has no review threads.
 
 ## 2. Phase and subphase status
 
@@ -58,7 +57,7 @@ Open gates:
 - Verify Remotion integration security/authentication before enablement.
 
 ### Phase 1 — Repository Foundation
-**Status:** foundation implemented; CI green on `839adaa`; lockfile/`npm ci` open.
+**Status:** foundation implemented; CI green on `839adaa` and `2fa416f`; lockfile/`npm ci` open.
 
 **1.1 Workspace/app skeleton — done** (npm workspaces `apps/web`, `apps/api`, `packages/contracts`; React/Vite UI; Hono Worker `GET /api/v1/health`; shared Zod contracts).
 
@@ -67,13 +66,13 @@ Open gates:
 **1.3 Review remediation — fix done, thread unresolved**
 - Vite `server.proxy['/api']` -> `http://127.0.0.1:8787` (override `BYGA_API_ORIGIN`).
 - `apps/api` dev script pinned: `wrangler dev --ip 127.0.0.1 --port 8787`.
-- Found and fixed a real dev-blocking bug: `compatibility_date` was `2026-11-11`, which the installed workerd (`2026-11-10`) rejects ("in the future and unsupported"), so `wrangler dev` could not start. Now `2026-11-10`. The CI dry-run did not catch this.
+- Found and fixed a real dev-blocking bug: `compatibility_date` was `2026-11-11`, which the installed workerd (`2026-11-10`) rejects ("in the future and unsupported"), so `wrangler dev` could not start. Now `2026-11-10`. The earlier CI dry-run did not catch this.
 - `npm run smoke:dev` (`scripts/smoke-dev.mjs`) starts both servers and asserts 200, JSON content type, `x-request-id`, `status: ok`, service, version, timestamp via the Vite port. Added to CI.
 - Before the fix, the same request through Vite failed with 500 / ECONNREFUSED (observed).
 
 **1.4 Reproducible install/security — partially done**
-- Done: secret scanning step (`gitleaks/gitleaks-action@v2`, `fetch-depth: 0`, `pull-requests: read`) passed in run #17.
-- Open: no committed `package-lock.json`; CI still uses `npm install`. A valid lockfile (333 resolved entries, all registry.npmjs.org, ~172 KB) was generated locally and `npm ci` + all gates passed with it, but it could not be pushed: the sandbox has no GitHub write credential and the push tool would require transcribing 172 KB verbatim. Needs either a push from the owner's machine (`npm install` then commit `package-lock.json`, switch CI/README/docs to `npm ci`) or an approved method.
+- Done: secret scanning step (`gitleaks/gitleaks-action@v2`, `fetch-depth: 0`, `pull-requests: read`) passed in runs #17 and #18.
+- Open: no committed `package-lock.json`; CI still uses `npm install`. A valid lockfile (333 resolved entries, all registry.npmjs.org, ~172 KB) was generated locally and `npm ci` + all gates passed with it, but it could not be pushed: the sandbox has no GitHub write credential and the push tool would require transcribing 172 KB verbatim. Needs a push from the owner's machine (`npm install`, commit `package-lock.json`, switch CI/README/docs to `npm ci`) or another approved method.
 
 **1.5 PR integration — pending.** No merge.
 
@@ -89,7 +88,7 @@ Open gates:
 - `package.json` (`smoke:dev` script)
 - `scripts/smoke-dev.mjs` (new)
 - `README.md`, `docs/PHASE-1-FOUNDATION.md` (dev instructions, acceptance checklist updated to verified results, stray backslash-escaped backticks removed)
-- `HANDOFF.md` (this file)
+- `HANDOFF.md` (commits `2fa416f` and this refresh)
 
 PR #2 otherwise unchanged from the earlier 28-file set.
 
@@ -127,12 +126,12 @@ Non-negotiable:
 
 ## 7. Resume checklist
 - [ ] Re-read this file; verify branch/PR/CI state and head SHAs.
-- [x] Fix and verify Vite-to-Worker proxy (local smoke + CI run #17).
-- [x] Add secret scanning (CI run #17).
+- [x] Fix and verify Vite-to-Worker proxy (local smoke + CI runs #17/#18).
+- [x] Add secret scanning (CI runs #17/#18).
 - [x] Update stale Phase 1 acceptance docs.
 - [ ] Add lockfile and switch to `npm ci`.
 - [ ] Resolve Codex P2 thread on GitHub.
 - [ ] Re-check Phase 0 runtime/licensing gates.
 - [ ] Obtain approval before any merge or deployment.
 
-**End-of-session:** code commit `839adaa` green in run #17. PR #2 open; neither PR merged. No deployment, no Cloudflare resource changes, no legacy repository touched.
+**End-of-session:** code commit `839adaa` green in run #17; handoff commit `2fa416f` green in run #18. PR #1 and #2 open; neither merged. No deployment, no Cloudflare resource changes, no legacy repository touched.
