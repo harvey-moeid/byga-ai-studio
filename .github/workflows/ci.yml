@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
@@ -21,6 +22,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Secret scanning (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -35,5 +42,7 @@ jobs:
         run: npm test
       - name: Production build validation
         run: npm run build
+      - name: Dev proxy smoke test (Vite -> Wrangler)
+        run: npm run smoke:dev
       - name: Dependency vulnerability audit
         run: npm audit --audit-level=high

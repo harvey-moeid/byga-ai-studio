@@ -22,7 +22,7 @@ The four legacy repositories remain independent and must not be modified by work
 
 ## Repository layout
 
-\`\`\`text
+```text
 apps/
   api/                 Hono Worker and Wrangler configuration
   web/                 React + Vite frontend
@@ -33,28 +33,30 @@ docs/
   ...                  Product, architecture and integration audits
 .github/workflows/
   ci.yml
-\`\`\`
+```
 
 ## Local development
 
 Requirements: Node.js 22+ and npm 10+.
 
-\`\`\`bash
+```bash
 npm install
-npm run dev
-npm run dev:api
-\`\`\`
+npm run build --workspace=@byga/web   # once; Wrangler serves apps/web/dist as assets
+npm run dev:api                        # Wrangler on 127.0.0.1:8787
+npm run dev                            # Vite on 5173, proxies /api to Wrangler
+npm run smoke:dev                      # automated end-to-end check of the proxy
+```
 
-The frontend uses the same-origin \`/api/v1/health\` endpoint. Run quality checks with:
+The frontend calls the same-origin `/api/v1/health` endpoint; in development Vite proxies `/api` to Wrangler (override target with `BYGA_API_ORIGIN`). Run quality checks with:
 
-\`\`\`bash
+```bash
 npm run lint
 npm run typecheck
 npm test
 npm run build
-\`\`\`
+```
 
-\`npm run build\` builds the web app and runs a Wrangler dry run. It does not deploy.
+`npm run build` builds the web app and runs a Wrangler dry run. It does not deploy.
 
 ## Integration safety
 

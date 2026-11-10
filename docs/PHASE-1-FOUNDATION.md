@@ -1,10 +1,10 @@
 # Phase 1 — Repository Foundation
 
-**Status:** implementation baseline; CI verification pending GitHub Actions.
+**Status:** implementation delivered; review remediation (dev proxy) and secret scanning added; lockfile/`npm ci` still pending. Final CI verification of the PR head is recorded in `HANDOFF.md`.
 
 ## Scope delivered
 
-- npm workspaces for \`apps/web\`, \`apps/api\`, and \`packages/contracts\`.
+- npm workspaces for `apps/web`, `apps/api`, and `packages/contracts`.
 - React + TypeScript + Vite web application shell.
 - Hono API Worker with a versioned health endpoint and safe error envelope.
 - Shared Zod schemas for project input, engine identifiers, normalized job states, health and API errors.
@@ -21,26 +21,30 @@ The frontend labels all provider connections as not enabled. Suara remains block
 
 ## Deployment guard
 
-\`workers_dev\` is disabled. No production route or custom domain is configured because the production hostname and Cloudflare resource mapping have not been approved/verified. \`npm run build\` performs a Wrangler dry run only; it does not deploy.
+`workers_dev` is disabled. No production route or custom domain is configured because the production hostname and Cloudflare resource mapping have not been approved/verified. `npm run build` performs a Wrangler dry run only; it does not deploy.
 
 ## Local development
 
-- \`npm install\`
-- \`npm run dev\` — Vite frontend
-- \`npm run dev:api\` — Wrangler API Worker
-- \`npm run lint\`
-- \`npm run typecheck\`
-- \`npm test\`
-- \`npm run build\`
+- `npm install` (switch to `npm ci` once `package-lock.json` is committed)
+- `npm run build --workspace=@byga/web` once (Wrangler serves `apps/web/dist` as assets)
+- `npm run dev:api` — Wrangler API Worker on `127.0.0.1:8787`
+- `npm run dev` — Vite frontend on `5173`; proxies `/api` to Wrangler (override with `BYGA_API_ORIGIN`)
+- `npm run smoke:dev` — starts both servers and verifies `/api/v1/health` through Vite
+- `npm run lint`
+- `npm run typecheck`
+- `npm test`
+- `npm run build`
 
 ## Acceptance / verification
 
-- [ ] Clean install and dependency resolution.
-- [ ] ESLint passes.
-- [ ] TypeScript checks pass for web, API and shared contracts.
-- [ ] Unit tests pass.
-- [ ] Vite production build passes.
-- [ ] Wrangler dry-run build passes with static assets.
+- [ ] Lockfile-reproducible install (`package-lock.json` + `npm ci`) — pending.
+- [x] ESLint passes.
+- [x] TypeScript checks pass for web, API and shared contracts.
+- [x] Unit tests pass (6 tests).
+- [x] Vite production build passes.
+- [x] Wrangler dry-run build passes with static assets.
+- [x] Vite `/api` proxy to Wrangler dev verified by `npm run smoke:dev`.
+- [x] `npm audit --audit-level=high` reports 0 vulnerabilities.
 - [ ] GitHub Actions CI passes on the PR head.
 - [ ] No legacy repository or production resource is modified.
 
