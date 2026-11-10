@@ -2,6 +2,7 @@
   "name": "byga-ai-studio",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Unified workspace for AI-assisted audio and video production",
   "workspaces": ["apps/*", "packages/*"],
   "engines": { "node": ">=22.0.0", "npm": ">=10.0.0" },
