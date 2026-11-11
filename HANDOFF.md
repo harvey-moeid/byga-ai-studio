@@ -19,7 +19,7 @@
 - PR #11 merged: manual production deploy workflow with D1 migration preflight.
 - PR #12: open; docs branch `docs/phase-3-production-handoff`, head `53e76508be5ba4a955f5f15440a859d633bb2d7a`; 5 documentation files changed.
 - PR #13: open; UI branch `fix/phase-3-persistence-status-ui`, head `e1c029128838956a66b58cc055b8643f4595833d`; `apps/web/src/App.tsx` now displays actual API persistence mode (`d1`, `memory`, or unverified) and Phase 3 mock-engine status.
-- Latest observed CI run: #59, completed/success on `fix/phase-3-persistence-status-ui`, URL: https://github.com/harvey-moeid/byga-ai-studio/actions/runs/42963536273.
+- Latest observed CI run: #66, completed/success on `docs/phase-3-production-handoff`, URL: https://github.com/harvey-moeid/byga-ai-studio/actions/runs/42963940461.
 - PR #12 documentation CI run #55 completed/success: https://github.com/harvey-moeid/byga-ai-studio/actions/runs/42963398324.
 - D1 migration workflow run #1 (ID `42961706228`) was a dry-run only. Run #2 (ID `42962819170`) completed/success with all steps, including “Apply migrations (remote)” and post-apply listing, successful.
 - Production D1 database: `byga-ai-studio`, UUID `5b6d6aab-f2f4-4a4d-b6b5-db4b513f6c1e`.
@@ -104,7 +104,7 @@ PR/push/manual quality gates: gitleaks, Node 22, `npm ci`, lint, typecheck, unit
 ## 5. Verification record
 
 - Main CI run #50: completed/success. This confirms configured CI passed for that run, not manual UX or provider runtime readiness.
-- PR #12 latest CI run #55: completed/success after ADR refresh.
+- PR #12 latest CI run #66: completed/success after final handoff refresh.
 - PR #13 initial CI run #57 failed at TypeScript typecheck due an inferred `unknown` health response; corrected with an explicit API response type. Final CI run #63 completed/success after addressing the P2 review finding. The UI now says D1 is configured, not that writes are guaranteed; the review thread is resolved. The cancelled duplicate runs #56 and #58 are not failures of the final commit.
 - D1 workflow run #2 (`42962819170`): completed/success; list, apply and post-apply list steps all successful.
 - Independent read-only remote SQL: migration rows for `0001_init.sql` and `0002_job_provider_id.sql`; tables `projects`, `assets`, `jobs` and expected indexes exist.
