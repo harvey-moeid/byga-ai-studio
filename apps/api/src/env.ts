@@ -9,4 +9,12 @@ export type Bindings = {
   SUARA_ENABLED?: string;
   SUARA_BASE_URL?: string;
   SUARA_APP_PASSCODE?: string;
+  REMOTION_ENABLED?: string;
+  REMOTION_RENDER_APPROVED?: string;
+  REMOTION_BASE_URL?: string;
+  REMOTION_ACCESS_CODE?: string;
+  HYPERFRAMES_ENABLED?: string;
+  HYPERFRAMES_RENDER_APPROVED?: string;
+  HYPERFRAMES_BASE_URL?: string;
+  HF_HEADER_VALUE?: string;
 };
