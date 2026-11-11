@@ -18,10 +18,12 @@ catch(error){if(process.env.CI)throw error;/* local Node without node:sqlite: sk
 
 const MIGRATION_1=readFileSync(new URL('../migrations/0001_init.sql',import.meta.url),'utf8');
 const MIGRATION_2=readFileSync(new URL('../migrations/0002_job_provider_id.sql',import.meta.url),'utf8');
+const MIGRATION_3=readFileSync(new URL('../migrations/0003_asset_object_key.sql',import.meta.url),'utf8');
 function makeDb(){
   const sqlite=new (DatabaseSync as SqliteCtor)(':memory:');
   sqlite.exec(MIGRATION_1);
   sqlite.exec(MIGRATION_2);
+  sqlite.exec(MIGRATION_3);
   const bound=(sql:string,values:unknown[])=>({
     run:async()=>({success:true,results:[],meta:{changes:Number(sqlite.prepare(sql).run(...values).changes)}}),
     all:async()=>({success:true,results:sqlite.prepare(sql).all(...values),meta:{}}),
@@ -53,8 +55,8 @@ describe.skipIf(DatabaseSync===null)('D1Store against the real migrations',()=>{
     await store.createAsset(asset({id:'ast_asset00002',projectId:'prj_beta00002',checksum:'sha256:abcdef12'}));
     expect(await store.listAssets()).toHaveLength(2);
     expect(await store.listAssets('prj_beta00002')).toEqual([asset({id:'ast_asset00002',projectId:'prj_beta00002',checksum:'sha256:abcdef12'})]);
-    expect(await store.deleteAsset('ast_asset00001')).toBe(true);
-    expect(await store.deleteAsset('ast_asset00001')).toBe(false);
+    expect(await store.deleteAsset('ast_asset00001')).toEqual(asset());
+    expect(await store.deleteAsset('ast_asset00001')).toBeNull();
   });
   it('enforces foreign keys and check constraints',async()=>{
     const store=new D1Store(makeDb() as never);
