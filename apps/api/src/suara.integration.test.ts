@@ -4,7 +4,7 @@ import {app} from './app';
 const TOKEN='s'.repeat(40);
 const env={STUDIO_ACCESS_TOKEN:TOKEN,SUARA_ENABLED:'true',SUARA_BASE_URL:'https://suara.example',SUARA_APP_PASSCODE:'server-only-passcode'};
 const headers={authorization:'Bearer '+TOKEN};
-const send=(path:string,init:RequestInit={})=>app.request(path,{...init,headers:{...headers,...Object.fromEntries(new Headers(init.headers))}},env);
+const send=(path:string,init:RequestInit={})=>{const merged=new Headers(headers);new Headers(init.headers).forEach((value,key)=>merged.set(key,value));return app.request(path,{...init,headers:merged},env);};
 
 afterEach(()=>vi.unstubAllGlobals());
 
