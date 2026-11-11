@@ -117,11 +117,11 @@ PR/push/manual quality gates: gitleaks, Node 22, `npm ci`, lint, typecheck, unit
 1. Review PR #12 (documentation/ADR refresh) and PR #13 (persistence status UI); both remain open and neither has been merged.
 2. Owner decides whether to merge the PRs after reviewing their diffs and green CI.
 3. Verify GitHub `production` Environment required reviewers and Cloudflare API token scopes.
-3. Configure `STUDIO_ACCESS_TOKEN` as a Worker secret using an approved secure path; do not send the secret in chat.
-4. Complete manual login/session review at 360px and desktop.
-5. Verify Remotion/HyperFrames/MCPNEW contracts one at a time with explicit approval for any operation that can mutate legacy systems.
-6. Complete Phase 3 runtime and persistence integration tests.
-7. Decide separately whether to authorize production deployment and route/domain configuration.
+4. Configure `STUDIO_ACCESS_TOKEN` as a Worker secret using an approved secure path; do not send the secret in chat.
+5. Complete manual login/session review at 360px and desktop.
+6. Verify Remotion/HyperFrames/MCPNEW contracts one at a time with explicit approval for any operation that can mutate legacy systems.
+7. Complete Phase 3 runtime and persistence integration tests.
+8. Decide separately whether to authorize production deployment and route/domain configuration.
 
 ## 7. Session continuation instruction
 
