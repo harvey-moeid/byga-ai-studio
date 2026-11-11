@@ -59,6 +59,9 @@ async function main() {
   assert(body.service === 'byga-ai-studio-api', 'service name matches Studio API');
   assert(typeof body.version === 'string' && body.version.length > 0, 'version is present');
   assert(!Number.isNaN(Date.parse(body.checkedAt)), 'checkedAt is a valid timestamp');
+
+  const guarded = await fetch(`${WEB}/api/v1/projects`, { headers: { accept: 'application/json' } });
+  assert(guarded.status === 401 || guarded.status === 503, 'GET /api/v1/projects without credentials is rejected (401, or 503 when no token is configured)');
   out('SMOKE PASSED');
 }
 

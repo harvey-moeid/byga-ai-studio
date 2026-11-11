@@ -1,40 +1,35 @@
 # BYGA AI Studio — Session Handoff
 
-**Verified:** 2026-11-11  
+**Updated:** 2026-11-11  
 **Repository:** harvey-moeid/byga-ai-studio  
-**Branch:** feat/phase-2-core-platform  
-**Active phase:** Phase 2 — Core Platform; implementation pushed, CI run #27 green.  
-**Previous phases:** Phase 0 merged in PR #1; Phase 1 merged in PR #3.
+**Branch:** feat/phase-3-auth (from main @ 956fffa)  
+**Active phase:** Phase 3 — step 1 of N: authentication (done in code, CI pending). Remotion adapter is next.  
+**Previous phases:** Phase 0 PR #1, Phase 1 PR #3, Phase 2 PR #4 (all merged).
 
 Re-check branch/PR/Actions and exact head SHA on resume. Green CI is not a production-readiness signal.
 
-## Phase 2 scope
+## Phase 3 progress
 
-- Responsive dashboard with metrics, recent jobs and engine registry.
-- Project create/list/rename/archive.
-- Asset metadata register/list/remove; no binary upload.
-- Normalized mock job lifecycle queued → running → succeeded.
-- HyperFrames/Remotion mock adapters only.
-- Suara blocked pending model licensing; MCPNEW unverified pending MCP/OAuth runtime verification.
-- Shared Zod contracts and API tests.
+- [x] Auth decision recorded: docs/PHASE-3-AUTH.md (single operator, `STUDIO_ACCESS_TOKEN`, session cookie).
+- [x] API middleware, login/logout/session routes, contracts, tests, web login gate, smoke assertion.
+- [ ] CI green on PR; manual login check at 360 px and desktop.
+- [ ] Persistence decision (still open; data is in Worker memory).
+- [ ] Remotion adapter (see below).
+- [ ] HyperFrames, MCPNEW adapters; Suara stays blocked on model licensing.
 
-## Verification
+## Remotion adapter — prerequisites before code that calls the provider
 
-- CI run #27 passed on dd71e23: secret scan, npm ci, lint, typecheck, unit tests, build, dev proxy smoke and npm audit.
-- Manual mobile review at 360 px and desktop remains pending.
-- PR #4 is open; not merged.
+Source-verified only (docs/INTEGRATION-MATRIX.md, remotion @ 26a8198): `POST /api/render`, status/cancel, uploads, public output. Open items:
 
-## Hard boundaries
+- Submit handler has no app-level auth; job/output routes are public; KV quota is non-atomic.
+- Dispatch writes legacy KV/R2 — any runtime test mutates legacy resources and needs explicit approval.
+- Deployed base URL and auth expectations unconfirmed at runtime.
 
-- Volatile in-memory state only; data may disappear on Worker restart/isolate change.
-- No authentication/user model or durable persistence. Not a public multi-user production API.
-- Assets are metadata-only; no file bytes uploaded.
-- Job outputs are mock:// references, not media.
-- No real provider calls, legacy repo changes, Cloudflare resource changes or deployments.
-- No production deploy, preview deploy or staging environment.
+Safe work that does not touch legacy systems: adapter interface, feature flag (default off), health check, timeout/bounded retry, fixture-based client tests.
 
-## Next steps
+## Hard boundaries (unchanged)
 
-1. Perform manual mobile/desktop acceptance.
-2. Review PR #4.
-3. Decide authentication and persistence before Phase 3 or public deployment.
+- No changes to legacy repos (mcpnew, hyperframes, remotion, suara), Cloudflare resources, secrets or deployments without separate explicit approval.
+- No real provider calls until contracts are verified and approved.
+- Volatile in-memory state only; assets are metadata-only; outputs are `mock://` references.
+- Production-only deployment; no preview/staging; no release without approval.
