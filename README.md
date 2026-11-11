@@ -2,8 +2,8 @@
 
 Unified workspace for AI-assisted audio and video production.
 
-> **Current status:** Phase 3 — authentication, D1 persistence and adapter foundations. Production D1 binding and manual migration/deploy workflows are merged. Remote production migrations 0001 and 0002 have been applied and independently verified.
-> **Deployment:** production only; no preview/staging. Production migration and release require explicit owner approval.
+> **Current status:** Phase 4 — unified creation workflows and private R2 assets are merged to `main`. The production Worker is deployed but has no public route yet. Phase 3 acceptance items remain open.
+> **Deployment:** production only; no preview/staging. Any route/domain, secret, migration or release change requires explicit owner approval.
 
 ## Product direction
 
@@ -15,25 +15,27 @@ React, TypeScript, Vite, Hono on Cloudflare Workers, Zod, npm workspaces, Vitest
 
 ## Delivered baseline
 
-- Responsive dashboard, project management and asset metadata registry.
-- Normalized job center and engine registry with mock states.
+- Responsive dashboard, project management and asset registry.
+- Normalized job center and engine registry.
 - Single-operator authentication/session foundation.
 - D1 Store boundary, additive SQL migrations and SQLite-backed tests.
-- Isolated Remotion client foundation, default-off and not yet wired to production routes.
+- Unified audio/video creation launcher (audio via Suara; video is simulation only).
+- Private R2 asset upload, authenticated download and delete.
+- Suara TTS adapter, opt-in and personal/non-commercial only.
+- Isolated Remotion client foundation, default-off and not wired to production routes.
 - Manual D1 migration workflow and manual production deploy workflow with quality gates and D1 preflight.
 
 ## Current production readiness
 
-- Production D1 database and `DB` binding exist.
-- Migrations `0001_init.sql` and `0002_job_provider_id.sql` were applied by workflow run #2 (`42962819170`), which completed successfully.
-- Independent read-only SQL confirmed both rows in `d1_migrations` and the `projects`, `assets`, and `jobs` application tables.
-- Do not deploy until remaining auth secret, UX, runtime, route/domain and explicit release approval gates are satisfied.
-- `STUDIO_ACCESS_TOKEN` Worker secret, production route/custom domain and manual UX acceptance are separate outstanding prerequisites.
-- No provider adapter is enabled for real external operations.
+- Production D1 database, R2 bucket and Worker bindings exist; the Worker has been deployed.
+- Migrations `0001_init.sql` and `0002_job_provider_id.sql` were applied by workflow run #2 (`42962819170`) and verified.
+- The Worker is not publicly reachable until a route or custom domain is deployed. The owner-chosen domain is `aivideo.muidsoft.com`.
+- Still open: production login/read-write/R2 acceptance, manual UX/accessibility acceptance, and verification of provider runtime contracts.
+- No provider adapter is enabled for real external operations unless explicitly configured server-side.
 
 ## Mock-mode and integration limits
 
-Records can still be volatile when D1 is not bound in the runtime. Project assets are uploaded to a private, project-scoped Cloudflare R2 bucket; downloads pass through the authenticated API. Mock job outputs are not generated media. No external provider is contacted by mock adapters, and engine cards do not report live provider health.
+Records can still be volatile when D1 is not bound in the runtime. Project assets are uploaded to a private, project-scoped Cloudflare R2 bucket; downloads pass through the authenticated API. Video job outputs are simulated and are not generated media. Engine cards do not report live provider health unless the explicit health endpoint is called.
 
 ## Local development
 
@@ -56,7 +58,7 @@ Vite runs on port 5173 and proxies /api to Wrangler on 8787. `npm run build` val
 - No provider credentials in frontend or source control.
 - No external render/audio submit, asset upload, cancellation or workflow dispatch without separate approval.
 - Studio API health is not provider health.
-- No production route/domain or secret is assumed configured.
+- Route/domain, secret and deployment changes need explicit owner approval.
 - Do not modify MCPNEW, HyperFrames, Remotion or Suara repositories without separate approval.
 
 ## R2 asset storage
@@ -74,6 +76,11 @@ Vite runs on port 5173 and proxies /api to Wrangler on 8787. `npm run build` val
 - docs/API-CONTRACT.md
 - docs/PHASE-1-FOUNDATION.md
 - docs/PHASE-2-CORE-PLATFORM.md
+- docs/PHASE-3-AUTH.md
+- docs/PHASE-3-PERSISTENCE.md
+- docs/PHASE-3-SUARA.md
+- docs/PHASE-4-CREATION-WORKFLOWS.md
+- docs/PHASE-4-R2-ASSETS.md
 
 ## License
 

@@ -14,15 +14,21 @@
 ### GitHub
 - `main` includes Phase 4 (`5ec3616` feat: Phase 4 creation workflows and private R2 assets), the Suara integration (PR #15) and earlier Phase 3 work.
 - Latest CI on `main`: run #96, completed/success (https://github.com/harvey-moeid/byga-ai-studio/actions/runs/42986089398).
-- No open PRs or issues at the time of the check (before the PR that carries this handoff).
+- No open PRs or issues at the time of the check (before the PRs that carry this handoff and the domain route).
 - Workflows on `main`: `ci.yml`, `deploy-production.yml` (manual, confirm=`DEPLOY`), `migrate-d1.yml` (manual, `dry_run` default true).
 
 ### Cloudflare (read-only inspection)
 - Worker `byga-ai-studio` exists; latest deployment `528353f3-4a9e-41a8-967c-d57ae15a0bd6` (2026-11-11 08:20 UTC, source: wrangler, version `106e4c34-efe4-4153-a592-a0ee3db36887` at 100%).
 - Bindings: `ASSETS`, `DB` (D1), `R2_ASSETS` (R2), `STUDIO_ACCESS_TOKEN` (secret_text; value not readable).
-- No custom domains and no cron triggers. `wrangler.jsonc` has `workers_dev: false` and no routes, so the Worker is not publicly reachable.
+- No custom domains and no cron triggers on the deployed Worker. `wrangler.jsonc` on `main` has `workers_dev: false` and no routes, so the Worker is not publicly reachable.
 - D1 database `byga-ai-studio` (`5b6d6aab-f2f4-4a4d-b6b5-db4b513f6c1e`) and R2 bucket `byga-ai-studio-assets` exist.
 - No staging Worker, D1 database or R2 bucket exists for the Studio.
+- Zone `muidsoft.com` is in the account. The current API token cannot read DNS records (403), so whether `aivideo.muidsoft.com` is already in use was NOT verified.
+
+### Domain decision
+- Owner chose `aivideo.muidsoft.com` as the production domain (2026-11-11).
+- The route is declared in a separate PR as a Wrangler custom domain. It takes effect only after an owner-approved `Deploy production` run; merging alone changes nothing on Cloudflare.
+- Wrangler custom domains fail the deploy if a conflicting DNS record already exists for the hostname; check for an existing record or Worker on that hostname before deploying.
 
 ## 2. Phase status
 
@@ -34,8 +40,8 @@
 
 ### Open
 - Confirm no D1 migration is pending (`D1 migrations` workflow, `dry_run=true`).
-- Production route or custom domain (owner decision; currently none).
-- Controlled production acceptance: login, D1 read/write (`persistence: d1`), R2 upload/download/delete, Suara health (`GET /api/v1/engines/suara/health`).
+- Merge the domain route PR and run an owner-approved production deploy.
+- Controlled production acceptance on `aivideo.muidsoft.com`: login, D1 read/write (`persistence: d1`), R2 upload/download/delete, Suara health (`GET /api/v1/engines/suara/health`).
 - Confirm GitHub `production` Environment protection and Cloudflare token scope.
 - Manual login/session UX and screen-reader/keyboard acceptance at desktop and 360px.
 - Provider contracts: HyperFrames base URL, Remotion runtime, MCPNEW OAuth (all unverified).
@@ -56,7 +62,7 @@
 
 ## 4. Recommended next step
 
-With owner approval: run `D1 migrations` with `dry_run=true`, decide on a route/custom domain, then run the production acceptance checklist in section 2 using a dedicated test project, and record results here.
+With owner approval: run `D1 migrations` with `dry_run=true`, merge the domain route PR, run `Deploy production`, then run the production acceptance checklist in section 2 using a dedicated test project and record results here.
 
 ## 5. Resume prompt
 
