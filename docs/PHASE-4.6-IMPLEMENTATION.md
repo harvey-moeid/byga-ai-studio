@@ -51,7 +51,7 @@
 
 | Check | Status |
 |---|---|
-| Static lint/typecheck/tests/build | Pending CI on PR #23 |
+| Static lint/typecheck/tests/build | Passed CI run #120 on PR #23 |
 | D1 migration preflight/apply | Not run; owner approval required |
 | Production R2 round-trip | Not run |
 | Remotion runtime health / render | Not run; owner approval and secure configuration required |
