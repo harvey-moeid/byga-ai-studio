@@ -1,32 +1,33 @@
 import { z } from 'zod';
-
-export const ProjectNameSchema = z.string().trim().min(1).max(80);
-export const ProjectIdSchema = z.string().regex(/^prj_[a-zA-Z0-9_-]{8,64}$/);
-
-export const CreateProjectInputSchema = z.object({
-  name: ProjectNameSchema
-}).strict();
-
-export const EngineSchema = z.enum(['hyperframes', 'remotion', 'suara']);
-export const JobStateSchema = z.enum(['submitted', 'queued', 'running', 'succeeded', 'failed', 'cancelled']);
-
-export const HealthResponseSchema = z.object({
-  service: z.literal('byga-ai-studio-api'),
-  status: z.literal('ok'),
-  version: z.string().min(1),
-  checkedAt: z.string().datetime()
-}).strict();
-
-export const ApiErrorSchema = z.object({
-  error: z.object({
-    code: z.string().min(1),
-    message: z.string().min(1),
-    requestId: z.string().min(1)
-  }).strict()
-}).strict();
-
-export type CreateProjectInput = z.infer<typeof CreateProjectInputSchema>;
-export type Engine = z.infer<typeof EngineSchema>;
-export type JobState = z.infer<typeof JobStateSchema>;
-export type HealthResponse = z.infer<typeof HealthResponseSchema>;
-export type ApiError = z.infer<typeof ApiErrorSchema>;
+export const ProjectNameSchema=z.string().trim().min(1).max(80);
+export const ProjectIdSchema=z.string().regex(/^prj_[a-zA-Z0-9_-]{8,64}$/);
+export const AssetIdSchema=z.string().regex(/^ast_[a-zA-Z0-9_-]{8,64}$/);
+export const JobIdSchema=z.string().regex(/^job_[a-zA-Z0-9_-]{8,64}$/);
+export const CreateProjectInputSchema=z.object({name:ProjectNameSchema}).strict();
+export const UpdateProjectInputSchema=z.object({name:ProjectNameSchema.optional(),archived:z.boolean().optional()}).strict().refine(v=>Object.keys(v).length>0);
+export const EngineSchema=z.enum(['hyperframes','remotion','suara','mcpnew']);
+export const JobStateSchema=z.enum(['submitted','queued','running','succeeded','failed','cancelled']);
+export const AssetTypeSchema=z.enum(['image','audio','video','document','other']);
+export const CreateAssetInputSchema=z.object({projectId:ProjectIdSchema,name:z.string().trim().min(1).max(160),mimeType:z.string().trim().min(3).max(120),size:z.number().int().positive().max(25*1024*1024),type:AssetTypeSchema,checksum:z.string().trim().min(8).max(128).optional()}).strict();
+export const CreateJobInputSchema=z.object({projectId:ProjectIdSchema,engine:EngineSchema,operation:z.string().trim().min(1).max(80),input:z.record(z.string(),z.unknown()).default({})}).strict();
+export const ProjectSchema=z.object({id:ProjectIdSchema,name:ProjectNameSchema,archived:z.boolean(),createdAt:z.string().datetime(),updatedAt:z.string().datetime()}).strict();
+export const AssetSchema=z.object({id:AssetIdSchema,projectId:ProjectIdSchema,name:z.string(),mimeType:z.string(),size:z.number().int(),type:AssetTypeSchema,checksum:z.string().optional(),createdAt:z.string().datetime(),storage:z.literal('metadata-only')}).strict();
+export const JobSchema=z.object({id:JobIdSchema,projectId:ProjectIdSchema,engine:EngineSchema,operation:z.string(),state:JobStateSchema,createdAt:z.string().datetime(),updatedAt:z.string().datetime(),input:z.record(z.string(),z.unknown()),output:z.object({kind:z.literal('mock'),reference:z.string()}).optional(),error:z.string().optional(),providerJobId:z.null()}).strict();
+export const EngineStatusSchema=z.enum(['mock-ready','disabled','blocked','unverified']);
+export const EngineInfoSchema=z.object({key:EngineSchema,name:z.string(),status:EngineStatusSchema,mode:z.enum(['mock','inactive']),description:z.string(),capabilities:z.array(z.string())}).strict();
+export const DashboardSummarySchema=z.object({projects:z.number().int().nonnegative(),activeProjects:z.number().int().nonnegative(),assets:z.number().int().nonnegative(),jobs:z.number().int().nonnegative(),runningJobs:z.number().int().nonnegative(),succeededJobs:z.number().int().nonnegative(),failedJobs:z.number().int().nonnegative(),mode:z.literal('mock')}).strict();
+export const HealthResponseSchema=z.object({service:z.literal('byga-ai-studio-api'),status:z.literal('ok'),version:z.string().min(1),checkedAt:z.string().datetime()}).strict();
+export const ApiErrorSchema=z.object({error:z.object({code:z.string().min(1),message:z.string().min(1),requestId:z.string().min(1)}).strict()}).strict();
+export type CreateProjectInput=z.infer<typeof CreateProjectInputSchema>;
+export type UpdateProjectInput=z.infer<typeof UpdateProjectInputSchema>;
+export type CreateAssetInput=z.infer<typeof CreateAssetInputSchema>;
+export type CreateJobInput=z.infer<typeof CreateJobInputSchema>;
+export type Project=z.infer<typeof ProjectSchema>;
+export type Asset=z.infer<typeof AssetSchema>;
+export type Job=z.infer<typeof JobSchema>;
+export type Engine=z.infer<typeof EngineSchema>;
+export type JobState=z.infer<typeof JobStateSchema>;
+export type EngineInfo=z.infer<typeof EngineInfoSchema>;
+export type DashboardSummary=z.infer<typeof DashboardSummarySchema>;
+export type HealthResponse=z.infer<typeof HealthResponseSchema>;
+export type ApiError=z.infer<typeof ApiErrorSchema>;

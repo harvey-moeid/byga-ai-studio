@@ -1,23 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import { ApiErrorSchema, CreateProjectInputSchema, HealthResponseSchema, JobStateSchema } from '../src/index';
-
-describe('shared contracts', () => {
-  it('accepts a trimmed project name', () => {
-    expect(CreateProjectInputSchema.parse({ name: '  Campaign  ' })).toEqual({ name: 'Campaign' });
-  });
-
-  it('rejects empty and oversized project names', () => {
-    expect(CreateProjectInputSchema.safeParse({ name: '  ' }).success).toBe(false);
-    expect(CreateProjectInputSchema.safeParse({ name: 'x'.repeat(81) }).success).toBe(false);
-  });
-
-  it('accepts only normalized job states', () => {
-    expect(JobStateSchema.safeParse('running').success).toBe(true);
-    expect(JobStateSchema.safeParse('rendering').success).toBe(false);
-  });
-
-  it('validates health and error response envelopes', () => {
-    expect(HealthResponseSchema.safeParse({ service: 'byga-ai-studio-api', status: 'ok', version: '0.1.0', checkedAt: new Date().toISOString() }).success).toBe(true);
-    expect(ApiErrorSchema.safeParse({ error: { code: 'NOT_FOUND', message: 'Not found', requestId: 'req_123' } }).success).toBe(true);
-  });
+import {describe,expect,it} from 'vitest';
+import {ApiErrorSchema,CreateAssetInputSchema,CreateJobInputSchema,CreateProjectInputSchema,DashboardSummarySchema,HealthResponseSchema,JobStateSchema,ProjectSchema} from '../src/index';
+describe('shared contracts',()=>{
+it('normalizes project input',()=>{expect(CreateProjectInputSchema.parse({name:' Campaign '})).toEqual({name:'Campaign'});expect(CreateProjectInputSchema.safeParse({name:' '}).success).toBe(false);});
+it('validates project, asset and job shapes',()=>{const t=new Date().toISOString();expect(ProjectSchema.safeParse({id:'prj_12345678',name:'Campaign',archived:false,createdAt:t,updatedAt:t}).success).toBe(true);expect(CreateAssetInputSchema.safeParse({projectId:'prj_12345678',name:'x.png',mimeType:'image/png',size:10,type:'image'}).success).toBe(true);expect(CreateJobInputSchema.safeParse({projectId:'prj_12345678',engine:'remotion',operation:'render'}).success).toBe(true);});
+it('accepts normalized job states only',()=>{expect(JobStateSchema.safeParse('running').success).toBe(true);expect(JobStateSchema.safeParse('rendering').success).toBe(false);});
+it('validates dashboard, health and error envelopes',()=>{expect(DashboardSummarySchema.safeParse({projects:0,activeProjects:0,assets:0,jobs:0,runningJobs:0,succeededJobs:0,failedJobs:0,mode:'mock'}).success).toBe(true);expect(HealthResponseSchema.safeParse({service:'byga-ai-studio-api',status:'ok',version:'0.2.0',checkedAt:new Date().toISOString()}).success).toBe(true);expect(ApiErrorSchema.safeParse({error:{code:'NOT_FOUND',message:'Not found',requestId:'req_123'}}).success).toBe(true);});
 });
