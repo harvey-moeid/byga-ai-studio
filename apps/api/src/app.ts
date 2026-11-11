@@ -20,6 +20,15 @@ async function readBody<T>(request:Request,schema:ZodType<T>):Promise<{ok:true;d
 async function activeProject(store:Store,id:string){const p=await store.getProject(id);return p!==null&&!p.archived;}
 const suaraAdapter=(env:Bindings)=>new SuaraAdapter({enabled:env.SUARA_ENABLED==='true',baseUrl:env.SUARA_BASE_URL,passcode:env.SUARA_APP_PASSCODE});
 const suaraState=(status:string)=>status==='done'?'succeeded':status==='failed'?'failed':status==='running'?'running':'queued';
+async function syncSuaraJob(store:Store,old:Job,adapter:SuaraAdapter):Promise<Job>{
+if(old.engine!=='suara'||!old.providerJobId||['succeeded','failed','cancelled'].includes(old.state))return old;
+try{
+const provider=await adapter.getJob(old.providerJobId),state=suaraState(provider.status);
+const updated:Job={...old,state:state as Job['state'],updatedAt:now(),...(provider.status==='done'?{output:{kind:'audio',provider:'suara',formats:['mp3','wav'],...(provider.audioSec===null?{}:{durationSeconds:provider.audioSec})}}:{}),...(provider.status==='failed'?{error:provider.error??'Suara render failed.'}:{})};
+if(state!==old.state||JSON.stringify(updated.output)!==JSON.stringify(old.output)||updated.error!==old.error)await store.updateJob(updated,old.state);
+return updated;
+}catch{return old;}
+}
 app.use('*',async(c,next)=>{const id='req_'+crypto.randomUUID();c.set('requestId',id);c.header('X-Request-Id',id);c.header('X-Content-Type-Options','nosniff');c.header('Referrer-Policy','strict-origin-when-cross-origin');c.header('X-Frame-Options','DENY');c.header('Cache-Control','no-store');await next();});
 
 // --- Authentication (single operator, server-side secret; see docs/PHASE-3-AUTH.md) ---
@@ -99,14 +108,7 @@ return fail(c,502,'SUARA_SUBMISSION_FAILED','Suara tidak menerima job. Periksa s
 app.get('/api/v1/jobs/:id',async c=>{
 const store=getStore(c.env),old=await store.getJob(c.req.param('id'));
 if(!old)return fail(c,404,'JOB_NOT_FOUND','Job tidak ditemukan.');
-if(old.engine!=='suara'||!old.providerJobId)return c.json(old);
-if(['succeeded','failed','cancelled'].includes(old.state))return c.json(old);
-try{
-const provider=await suaraAdapter(c.env).getJob(old.providerJobId),state=suaraState(provider.status);
-const updated:Job={...old,state:state as Job['state'],updatedAt:now(),...(provider.status==='done'?{output:{kind:'audio',provider:'suara',formats:['mp3','wav'],...(provider.audioSec===null?{}:{durationSeconds:provider.audioSec})}}:{}),...(provider.status==='failed'?{error:provider.error??'Suara render failed.'}:{})};
-if(state!==old.state||updated.output!==old.output||updated.error!==old.error)await store.updateJob(updated,old.state);
-return c.json(updated);
-}catch{return c.json(old);}
+return c.json(await syncSuaraJob(store,old,suaraAdapter(c.env)));
 });
 app.get('/api/v1/jobs/:id/audio',async c=>{
 const job=await getStore(c.env).getJob(c.req.param('id'));
@@ -116,7 +118,10 @@ const format=c.req.query('format')==='wav'?'wav':'mp3';
 try{const audio=await suaraAdapter(c.env).getAudio(job.providerJobId,format);return new Response(audio.body,{status:200,headers:{'content-type':format==='mp3'?'audio/mpeg':'audio/wav','cache-control':'private, no-store','x-content-type-options':'nosniff'}});}
 catch(error){const status=error instanceof SuaraAdapterError?error.status:502;return fail(c,status===404?404:502,'SUARA_AUDIO_UNAVAILABLE','File audio belum tersedia dari Suara.');}
 });
-app.get('/api/v1/jobs',async c=>c.json(await getStore(c.env).listJobs(c.req.query('projectId')||undefined)));
+app.get('/api/v1/jobs',async c=>{
+const store=getStore(c.env),items=await store.listJobs(c.req.query('projectId')||undefined),adapter=suaraAdapter(c.env);
+return c.json(await Promise.all(items.map(job=>syncSuaraJob(store,job,adapter))));
+});
 app.post('/api/v1/jobs',async c=>{const store=getStore(c.env);const p=await readBody(c.req.raw,CreateJobInputSchema);if(!p.ok)return fail(c,400,'VALIDATION_ERROR','Input job tidak valid.');if(JSON.stringify(p.data.input).length>MAX_JOB_INPUT_BYTES)return fail(c,400,'VALIDATION_ERROR','Input job terlalu besar (maks 64 KiB).');if(!await activeProject(store,p.data.projectId))return fail(c,404,'PROJECT_NOT_FOUND','Project aktif tidak ditemukan.');const engine=engines.find(e=>e.key===p.data.engine);if(!engine||engine.status!=='mock-ready')return fail(c,409,'ENGINE_DISABLED','Engine ini belum tersedia untuk simulasi.');const t=now();const item:Job={id:makeId('job_'),...p.data,state:'queued',createdAt:t,updatedAt:t,providerJobId:null};await store.createJob(item);return c.json(item,201);});
 app.post('/api/v1/jobs/:id/advance',async c=>{const store=getStore(c.env);const old=await store.getJob(c.req.param('id'));if(!old)return fail(c,404,'JOB_NOT_FOUND','Job tidak ditemukan.');if(['succeeded','failed','cancelled'].includes(old.state))return fail(c,409,'JOB_TERMINAL','Job sudah berada pada status akhir.');const item:Job=old.state==='queued'?{...old,state:'running',updatedAt:now()}:{...old,state:'succeeded',updatedAt:now(),output:{kind:'mock',reference:'mock://'+old.projectId+'/'+old.id}};if(!await store.updateJob(item,old.state))return fail(c,409,'JOB_CONFLICT','Job diubah oleh permintaan lain. Muat ulang lalu coba lagi.');return c.json(item);});
 app.notFound(c=>c.json({error:{code:'NOT_FOUND',message:'Endpoint tidak ditemukan.',requestId:c.get('requestId')}},404));
