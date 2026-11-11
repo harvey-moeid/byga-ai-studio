@@ -30,7 +30,7 @@ describe('Remotion adapter foundation', () => {
   it('does not retry a submit after an ambiguous server error', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(response({ error: 'unavailable' }, 503));
     const adapter = new RemotionAdapter({ enabled: true, baseUrl: 'https://fixture.invalid', fetcher, readRetries: 2 });
-    await expect(adapter.submitJob({ jobId: 'local_1', template: 'Intro', ratio: '9:16' })).rejects.toMatchObject({ status: 503 });
+    await expect(adapter.submitJob({ template: 'Intro', ratio: '9:16' })).rejects.toMatchObject({ status: 503 });
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
