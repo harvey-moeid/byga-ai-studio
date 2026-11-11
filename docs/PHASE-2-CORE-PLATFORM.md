@@ -1,6 +1,6 @@
 # Phase 2 — Core Platform
 
-**Status:** Implemented on feat/phase-2-core-platform; CI verification pending.
+**Status:** Implemented on feat/phase-2-core-platform. CI run #27 passed.
 
 ## Delivered
 
@@ -37,13 +37,13 @@ Inputs are validated at API boundaries. Responses include request IDs and no-sto
 
 ## Acceptance
 
-- [ ] Lint, typecheck, unit tests, build and dev proxy smoke pass.
-- [ ] Project CRUD/archive and association tests pass.
-- [ ] Asset metadata validation and size limit tests pass.
-- [ ] Mock job lifecycle and disabled-engine tests pass.
-- [ ] Manual mobile review at 360px and desktop.
-- [ ] No legacy repository or production resource changed.
-- [ ] No deployment performed.
+- [x] Lint, typecheck, unit tests, build and dev proxy smoke pass (CI #27).
+- [x] Project CRUD/archive and association tests pass.
+- [x] Asset metadata validation and size limit tests pass.
+- [x] Mock job lifecycle and disabled-engine tests pass.
+- [ ] Manual mobile review at 360 px and desktop.
+- [x] No legacy repository or production resource changed.
+- [x] No deployment performed.
 
 ## Deferred
 

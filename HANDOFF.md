@@ -3,7 +3,7 @@
 **Verified:** 2026-11-11  
 **Repository:** harvey-moeid/byga-ai-studio  
 **Branch:** feat/phase-2-core-platform  
-**Active phase:** Phase 2 — Core Platform; implementation pushed, CI verification pending.  
+**Active phase:** Phase 2 — Core Platform; implementation pushed, CI run #27 green.  
 **Previous phases:** Phase 0 merged in PR #1; Phase 1 merged in PR #3.
 
 Re-check branch/PR/Actions and exact head SHA on resume. Green CI is not a production-readiness signal.
@@ -18,6 +18,12 @@ Re-check branch/PR/Actions and exact head SHA on resume. Green CI is not a produ
 - Suara blocked pending model licensing; MCPNEW unverified pending MCP/OAuth runtime verification.
 - Shared Zod contracts and API tests.
 
+## Verification
+
+- CI run #27 passed on dd71e23: secret scan, npm ci, lint, typecheck, unit tests, build, dev proxy smoke and npm audit.
+- Manual mobile review at 360 px and desktop remains pending.
+- PR #4 is open; not merged.
+
 ## Hard boundaries
 
 - Volatile in-memory state only; data may disappear on Worker restart/isolate change.
@@ -25,18 +31,10 @@ Re-check branch/PR/Actions and exact head SHA on resume. Green CI is not a produ
 - Assets are metadata-only; no file bytes uploaded.
 - Job outputs are mock:// references, not media.
 - No real provider calls, legacy repo changes, Cloudflare resource changes or deployments.
-- No production deploy, preview deploy, staging environment or merge performed.
-
-## Verification checklist
-
-- [ ] GitHub Actions CI on Phase 2 branch.
-- [ ] Lint, typecheck, tests, build and dev proxy smoke pass.
-- [ ] Manual mobile review at 360px and desktop.
-- [ ] Review PR diff and acceptance.
-- [ ] No production deployment without separate explicit approval.
+- No production deploy, preview deploy or staging environment.
 
 ## Next steps
 
-1. Inspect CI run and fix failures.
-2. Review Phase 2 PR.
+1. Perform manual mobile/desktop acceptance.
+2. Review PR #4.
 3. Decide authentication and persistence before Phase 3 or public deployment.
