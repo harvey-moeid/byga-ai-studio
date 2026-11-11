@@ -15,7 +15,7 @@ const engines:EngineInfo[]=[
 {key:'remotion',name:'Remotion',status:'mock-ready',mode:'mock',description:'Simulasi job render React.',capabilities:['mock-render']},
 {key:'suara',name:'Suara',status:'disabled',mode:'provider',description:'TTS pribadi non-komersial melalui OmniVoice; aktifkan konfigurasi server.',capabilities:['text-to-speech','voice-design','voice-clone','mp3','wav','async-jobs']},
 {key:'mcpnew',name:'MCPNEW',status:'unverified',mode:'inactive',description:'MCP/OAuth runtime belum diverifikasi.',capabilities:[]}];
-function fail(c:AppContext,status:400|401|403|404|409|429|503,code:string,message:string){return c.json(ApiErrorSchema.parse({error:{code,message,requestId:c.get('requestId')}}),status);}
+function fail(c:AppContext,status:400|401|403|404|409|413|429|502|503,code:string,message:string){return c.json(ApiErrorSchema.parse({error:{code,message,requestId:c.get('requestId')}}),status);}
 async function readBody<T>(request:Request,schema:ZodType<T>):Promise<{ok:true;data:T}|{ok:false}>{try{const p=schema.safeParse(await request.json());return p.success?{ok:true,data:p.data}:{ok:false};}catch{return{ok:false};}}
 async function activeProject(store:Store,id:string){const p=await store.getProject(id);return p!==null&&!p.archived;}
 const suaraAdapter=(env:Bindings)=>new SuaraAdapter({enabled:env.SUARA_ENABLED==='true',baseUrl:env.SUARA_BASE_URL,passcode:env.SUARA_APP_PASSCODE});
