@@ -2,8 +2,8 @@
 
 Unified workspace for AI-assisted audio and video production.
 
-> Current status: Phase 2 — Core Platform (mock mode).  
-> Deployment: production only; no preview/staging. Production release requires explicit owner approval.
+> **Current status:** Phase 3 — authentication, D1 persistence and adapter foundations. Production D1 binding and manual migration/deploy workflows are merged. Remote production migrations are still pending.
+> **Deployment:** production only; no preview/staging. Production migration and release require explicit owner approval.
 
 ## Product direction
 
@@ -13,19 +13,27 @@ BYGA AI Studio is the control plane for projects, assets, workflows and jobs acr
 
 React, TypeScript, Vite, Hono on Cloudflare Workers, Zod, npm workspaces, Vitest and GitHub Actions.
 
-## Phase 2 features
+## Delivered baseline
 
-- Dashboard metrics, recent jobs and engine registry.
-- Project create, rename and archive.
-- Asset metadata register/list/remove (no binary upload).
-- Normalized job center with queued → running → succeeded mock lifecycle.
-- Mock adapters for HyperFrames and Remotion.
-- Explicit disabled/unverified states for Suara and MCPNEW.
-- Responsive desktop and mobile layouts.
+- Responsive dashboard, project management and asset metadata registry.
+- Normalized job center and engine registry with mock states.
+- Single-operator authentication/session foundation.
+- D1 Store boundary, additive SQL migrations and SQLite-backed tests.
+- Isolated Remotion client foundation, default-off and not yet wired to production routes.
+- Manual D1 migration workflow and manual production deploy workflow with quality gates and D1 preflight.
 
-## Mock-mode limits
+## Current production readiness
 
-Records live in process memory and can disappear on Worker restart or isolate changes. Asset records contain metadata only; no files are uploaded or stored. Job output is a mock:// reference, not generated media. No external provider is contacted, no credentials are configured, and engine cards do not report live provider health. Do not deploy this mock API as a production multi-user service.
+- Production D1 database and `DB` binding exist.
+- Migrations `0001_init.sql` and `0002_job_provider_id.sql` have **not** been confirmed applied remotely.
+- The observed D1 workflow run #1 was a successful dry run only; apply steps were skipped.
+- Do not deploy until remote migrations are applied and verified.
+- `STUDIO_ACCESS_TOKEN` Worker secret, production route/custom domain and manual UX acceptance are separate outstanding prerequisites.
+- No provider adapter is enabled for real external operations.
+
+## Mock-mode and integration limits
+
+Records can still be volatile when D1 is not bound in the runtime. Asset records contain metadata only; no files are uploaded or stored. Mock job outputs are not generated media. No external provider is contacted by mock adapters, and engine cards do not report live provider health.
 
 ## Local development
 
@@ -40,20 +48,21 @@ npm run smoke:dev
 npm run check
 ```
 
-Vite runs on port 5173 and proxies /api to Wrangler on 8787. npm run build validates the web build and Wrangler dry-run only; it does not deploy.
+Vite runs on port 5173 and proxies /api to Wrangler on 8787. `npm run build` validates the web build and Wrangler dry-run only; it does not deploy.
 
 ## Integration safety
 
-- Provider adapters are not enabled; mock adapters never call external engines.
+- Provider adapters remain default-off until contracts and security controls are verified.
 - No provider credentials in frontend or source control.
-- No external render/audio submit, asset upload, cancellation or workflow dispatch.
+- No external render/audio submit, asset upload, cancellation or workflow dispatch without separate approval.
 - Studio API health is not provider health.
-- No production domain, Cloudflare resource, secret or route is assumed.
+- No production route/domain or secret is assumed configured.
 - Do not modify MCPNEW, HyperFrames, Remotion or Suara repositories without separate approval.
 
 ## Documentation
 
 - PRD.md
+- HANDOFF.md
 - docs/IMPLEMENTATION-PLAN.md
 - docs/ARCHITECTURE.md
 - docs/API-CONTRACT.md
