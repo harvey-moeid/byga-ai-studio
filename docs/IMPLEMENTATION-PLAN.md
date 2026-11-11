@@ -14,33 +14,37 @@ Inspect actual routes, Worker handlers, workflow dispatch contracts, authenticat
 
 ## Phase 1 — Repository foundation
 
-Establish pnpm workspace and minimal monorepo layout; TypeScript, lint, formatting, test runner and schema validation; frontend shell and API Worker skeleton; shared types and errors; CI for install, lint, typecheck, unit tests, build, dependency checks and secret scanning.
+Establish npm workspace and minimal monorepo layout; TypeScript, lint, formatting, test runner and schema validation; frontend shell and API Worker skeleton; shared types and errors; CI for install, lint, typecheck, unit tests, build, dependency checks and secret scanning.
 
-Exit gate: clean CI; no production deployment.
+**Implementation progress (2026-11-11):** initial foundation committed on `feat/phase-1-foundation`: npm workspaces, React/Vite frontend shell, Hono Worker health endpoint, shared Zod contracts, Vitest tests, ESLint/strict TypeScript and GitHub Actions CI. Production deployment is disabled. Provider adapters, auth, persistent data and legacy calls are intentionally not implemented.
+
+**Verification:** GitHub Actions run #8 passed dependency installation, lint, typecheck, unit tests, Vite build, Wrangler dry-run and npm audit. See PR #2. Local npm registry resolution timed out in the authoring environment; CI checks ran on GitHub-hosted runners. A committed package lockfile remains a follow-up; CI currently uses npm install rather than npm ci.
+
+**Exit gate:** CI quality gates pass; no production deployment.
 
 ## Phase 2 — Core platform
 
 Responsive dashboard, project CRUD/access boundaries, asset metadata design, normalized job center, engine registry/health/feature flags and mock adapters.
 
-Exit gate: complete mock workflow and mobile acceptance.
+**Exit gate:** complete mock workflow and mobile acceptance.
 
 ## Phase 3 — Engine adapters
 
-Integrate one at a time, subject to verified contracts: Suara; HyperFrames; Remotion; MCPNEW where justified. For each: document auth/schema; validate runtime input/output; add unit and contract tests; add timeout/retry/idempotency/error mapping; prove output retrieval; verify standalone engine is unaffected.
+Integrate one at a time, subject to verified contracts: Suara; HyperFrames; Remotion; MCPNEW. For each: document auth/schema; validate runtime input/output; add unit and contract tests; add timeout/retry/idempotency/error mapping; prove output retrieval; verify standalone engine is unaffected.
 
-Exit gate: adapter tests and explicit integration review pass.
+**Exit gate:** adapter tests and explicit integration review pass.
 
 ## Phase 4 — Unified workflows
 
 Project-based audio/video creation; supported template/voice/composition options; secure asset selection/upload; job progress/retry; output preview/download; mobile and accessibility review.
 
-Exit gate: end-to-end tests for enabled engines with authorized test requests.
+**Exit gate:** end-to-end tests for enabled engines with authorized test requests.
 
 ## Phase 5 — Production hardening and launch
 
 Threat model, security review, rate limiting, audit events, observability, operational runbook, reliability/load tests, retention/cost review, production secret review, rollback plan.
 
-Exit gate: owner approval before first production deployment.
+**Exit gate:** owner approval before first production deployment.
 
 ## Guardrails
 
