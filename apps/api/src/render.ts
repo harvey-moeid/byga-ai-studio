@@ -23,7 +23,7 @@ async function refreshStatus(db:D1Database,row:Row,base:string){
  const raw=String(payload.status??'').toLowerCase();
  const state=remotion?(raw==='done'?'succeeded':raw==='failed'?'failed':raw==='cancelled'?'cancelled':raw==='rendering'?'running':raw==='queued'?'queued':row.state):(raw==='done'?'succeeded':raw==='failed'?'failed':raw==='queued'?'queued':row.state);
  if(state===row.state)return asJob(row);
- const output=state==='succeeded'?JSON.stringify({kind:'video',provider:row.engine,providerJobId:row.provider_job_id,thumbnailAvailable:remotion}):null;
+ const output=state==='succeeded'?JSON.stringify({kind:'video',provider:row.engine,providerJobId:row.provider_job_id,thumbnailAvailable:remotion&&Boolean(payload.thumbUrl)}):null;
  const error=state==='failed'?'Provider render failed.':null,updated=now();
  await db.prepare('UPDATE jobs SET state=?,output_json=?,error=?,updated_at=? WHERE id=?').bind(state,output,error,updated,row.id).run();
  return {...asJob({...row,state,output_json:output,error,updated_at:updated}),...(output?{output:JSON.parse(output)}:{})};

@@ -29,7 +29,7 @@
 - Render Library lists only real render jobs; mock/simulation jobs are never represented as media.
 - Current output retention follows provider policy (Remotion: seven days; HyperFrames retention not verified). Output is proxied, not copied into Studio R2.
 
-## Required owner approvals before production acceptance
+## Provider environment bindings (server-side only)\n\nAll flags are default-off and require the string value `1` to enable. Do not add credentials to Git or browser configuration.\n\n- Remotion: `REMOTION_ENABLED`, `REMOTION_RENDER_APPROVED`, `REMOTION_BASE_URL`, `REMOTION_ACCESS_CODE`.\n- HyperFrames: `HYPERFRAMES_ENABLED`, `HYPERFRAMES_RENDER_APPROVED`, `HYPERFRAMES_BASE_URL`, `HF_HEADER_VALUE` (sent as the provider's `x-api-key` header).\n\n`REMOTION_RENDER_APPROVED` and `HYPERFRAMES_RENDER_APPROVED` are explicit server-side owner gates; the UI also requires per-render confirmation.\n\n## Required owner approvals before production acceptance
 
 1. Apply `0003_compositions.sql` using the existing D1 migrations workflow after explicit approval.
 2. Verify the exact HyperFrames deployed base URL. It is unresolved in the audit and must not be guessed.
