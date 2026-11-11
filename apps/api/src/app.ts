@@ -1,8 +1,10 @@
 import {Hono,type Context} from 'hono';
+import {deleteCookie,getCookie,setCookie} from 'hono/cookie';
 import type {ZodType} from 'zod';
-import {ApiErrorSchema,CreateAssetInputSchema,CreateJobInputSchema,CreateProjectInputSchema,DashboardSummarySchema,EngineInfoSchema,HealthResponseSchema,UpdateProjectInputSchema,type Asset,type EngineInfo,type Job,type Project} from '@byga/contracts';
-type Variables={requestId:string};type AppContext=Context<{Variables:Variables}>;
-export const app=new Hono<{Variables:Variables}>();
+import {ApiErrorSchema,CreateAssetInputSchema,CreateJobInputSchema,CreateProjectInputSchema,DashboardSummarySchema,EngineInfoSchema,HealthResponseSchema,LoginInputSchema,SessionResponseSchema,UpdateProjectInputSchema,type Asset,type EngineInfo,type Job,type Project} from '@byga/contracts';
+import {SESSION_COOKIE,SESSION_TTL_SECONDS,clearFailures,configuredToken,issueSession,recordFailure,throttleWait,tokenMatches,verifySession,type Bindings} from './auth';
+type Variables={requestId:string};type Env={Variables:Variables;Bindings:Bindings};type AppContext=Context<Env>;
+export const app=new Hono<Env>();
 const projects=new Map<string,Project>(),assets=new Map<string,Asset>(),jobs=new Map<string,Job>();
 const now=()=>new Date().toISOString(),makeId=(p:string)=>p+crypto.randomUUID().replace(/-/g,'').slice(0,20);
 const engines:EngineInfo[]=[
@@ -10,10 +12,41 @@ const engines:EngineInfo[]=[
 {key:'remotion',name:'Remotion',status:'mock-ready',mode:'mock',description:'Simulasi job render React.',capabilities:['mock-render']},
 {key:'suara',name:'Suara',status:'blocked',mode:'inactive',description:'Menunggu verifikasi lisensi model dan kontrak runtime.',capabilities:[]},
 {key:'mcpnew',name:'MCPNEW',status:'unverified',mode:'inactive',description:'MCP/OAuth runtime belum diverifikasi.',capabilities:[]}];
-function fail(c:AppContext,status:400|404|409,code:string,message:string){return c.json(ApiErrorSchema.parse({error:{code,message,requestId:c.get('requestId')}}),status);}
+function fail(c:AppContext,status:400|401|403|404|409|429|503,code:string,message:string){return c.json(ApiErrorSchema.parse({error:{code,message,requestId:c.get('requestId')}}),status);}
 async function readBody<T>(request:Request,schema:ZodType<T>):Promise<{ok:true;data:T}|{ok:false}>{try{const p=schema.safeParse(await request.json());return p.success?{ok:true,data:p.data}:{ok:false};}catch{return{ok:false};}}
 function activeProject(id:string){return projects.has(id)&&!projects.get(id)?.archived;}
 app.use('*',async(c,next)=>{const id='req_'+crypto.randomUUID();c.set('requestId',id);c.header('X-Request-Id',id);c.header('X-Content-Type-Options','nosniff');c.header('Referrer-Policy','strict-origin-when-cross-origin');c.header('X-Frame-Options','DENY');c.header('Cache-Control','no-store');await next();});
+
+// --- Authentication (single operator, server-side secret; see docs/PHASE-3-AUTH.md) ---
+const SAFE_METHODS=new Set(['GET','HEAD','OPTIONS']);
+const PUBLIC_PATHS=new Set(['/api/v1/health','/api/v1/auth/login','/api/v1/auth/logout','/api/v1/auth/session']);
+async function sessionInfo(c:AppContext){const token=configuredToken(c.env);const exp=token?await verifySession(getCookie(c,SESSION_COOKIE),token):null;return SessionResponseSchema.parse({authenticated:exp!==null,configured:token!==null,expiresAt:exp===null?null:new Date(exp*1000).toISOString()});}
+app.use('/api/v1/*',async(c,next)=>{
+if(PUBLIC_PATHS.has(c.req.path)){await next();return;}
+const token=configuredToken(c.env);
+if(!token)return fail(c,503,'AUTH_NOT_CONFIGURED','Autentikasi Studio belum dikonfigurasi di server.');
+const bearer=/^Bearer\s+(\S+)$/i.exec(c.req.header('authorization')??'')?.[1];
+if(bearer&&await tokenMatches(bearer,token)){await next();return;}
+if(await verifySession(getCookie(c,SESSION_COOKIE),token)!==null){
+if(!SAFE_METHODS.has(c.req.method)&&c.req.header('sec-fetch-site')!=='same-origin')return fail(c,403,'CSRF_REJECTED','Permintaan lintas-origin ditolak.');
+await next();return;}
+c.header('WWW-Authenticate','Bearer');
+return fail(c,401,'UNAUTHENTICATED','Autentikasi diperlukan.');});
+app.get('/api/v1/auth/session',async c=>c.json(await sessionInfo(c)));
+app.post('/api/v1/auth/login',async c=>{
+const token=configuredToken(c.env);
+if(!token)return fail(c,503,'AUTH_NOT_CONFIGURED','Autentikasi Studio belum dikonfigurasi di server.');
+const key=c.req.header('cf-connecting-ip')??'unknown';
+const wait=throttleWait(key);
+if(wait>0){c.header('Retry-After',String(wait));return fail(c,429,'TOO_MANY_ATTEMPTS','Terlalu banyak percobaan. Coba lagi nanti.');}
+const p=await readBody(c.req.raw,LoginInputSchema);
+if(!p.ok||!(await tokenMatches(p.data.token,token))){recordFailure(key);return fail(c,401,'INVALID_CREDENTIALS','Token akses tidak valid.');}
+clearFailures(key);
+const session=await issueSession(token);
+setCookie(c,SESSION_COOKIE,session.value,{httpOnly:true,secure:true,sameSite:'Strict',path:'/',maxAge:SESSION_TTL_SECONDS});
+return c.json(SessionResponseSchema.parse({authenticated:true,configured:true,expiresAt:new Date(session.exp*1000).toISOString()}));});
+app.post('/api/v1/auth/logout',c=>{deleteCookie(c,SESSION_COOKIE,{path:'/',secure:true});return c.json(SessionResponseSchema.parse({authenticated:false,configured:configuredToken(c.env)!==null,expiresAt:null}));});
+
 app.get('/api/v1/health',c=>c.json(HealthResponseSchema.parse({service:'byga-ai-studio-api',status:'ok',version:'0.2.0',checkedAt:now()})));
 app.get('/api/v1/dashboard',c=>c.json(DashboardSummarySchema.parse({projects:projects.size,activeProjects:[...projects.values()].filter(p=>!p.archived).length,assets:assets.size,jobs:jobs.size,runningJobs:[...jobs.values()].filter(j=>j.state==='running'||j.state==='queued').length,succeededJobs:[...jobs.values()].filter(j=>j.state==='succeeded').length,failedJobs:[...jobs.values()].filter(j=>j.state==='failed').length,mode:'mock'})));
 app.get('/api/v1/engines',c=>c.json(engines.map(e=>EngineInfoSchema.parse(e))));
