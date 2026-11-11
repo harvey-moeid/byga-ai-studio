@@ -40,12 +40,13 @@ describe('Suara API integration',()=>{
   });
 
   it('requires consent and reference audio for voice cloning',async()=>{
+    const fetcher=vi.fn<typeof fetch>();vi.stubGlobal('fetch',fetcher);
     const projectRes=await send('/api/v1/projects',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:'Clone consent test'})});
     const project=await projectRes.json() as {id:string};
     const form=new FormData();form.set('projectId',project.id);form.set('text','Halo');form.set('mode','clone');form.set('language','id');form.set('numStep','16');form.set('speed','1');
     const response=await send('/api/v1/suara/jobs',{method:'POST',body:form});
     expect(response.status).toBe(400);
-    expect(fetch).not.toHaveBeenCalled();
+    expect(fetcher).not.toHaveBeenCalled();
   });
 
   it('does not expose Suara configuration details or credentials in engine status',async()=>{
