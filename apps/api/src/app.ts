@@ -6,6 +6,8 @@ import {SESSION_COOKIE,SESSION_TTL_SECONDS,clearFailures,configuredToken,issueSe
 import type {Bindings} from './env';
 import {getStore,type Store} from './store';
 import {SuaraAdapter,SuaraAdapterError,type SuaraMode} from './adapters/suara';
+import {compositionRoutes} from './compositions';
+import {renderRoutes} from './render';
 type Variables={requestId:string};type Env={Variables:Variables;Bindings:Bindings};type AppContext=Context<Env>;
 export const app=new Hono<Env>();
 const MAX_JOB_INPUT_BYTES=64*1024;
@@ -160,5 +162,7 @@ return c.json(await Promise.all(items.map(job=>syncSuaraJob(store,job,adapter)))
 });
 app.post('/api/v1/jobs',async c=>{const store=getStore(c.env);const p=await readBody(c.req.raw,CreateJobInputSchema);if(!p.ok)return fail(c,400,'VALIDATION_ERROR','Input job tidak valid.');if(JSON.stringify(p.data.input).length>MAX_JOB_INPUT_BYTES)return fail(c,400,'VALIDATION_ERROR','Input job terlalu besar (maks 64 KiB).');if(!await activeProject(store,p.data.projectId))return fail(c,404,'PROJECT_NOT_FOUND','Project aktif tidak ditemukan.');const engine=engines.find(e=>e.key===p.data.engine);if(!engine||engine.status!=='mock-ready')return fail(c,409,'ENGINE_DISABLED','Engine ini belum tersedia untuk simulasi.');const t=now();const item:Job={id:makeId('job_'),...p.data,state:'queued',createdAt:t,updatedAt:t,providerJobId:null};await store.createJob(item);return c.json(item,201);});
 app.post('/api/v1/jobs/:id/advance',async c=>{const store=getStore(c.env);const old=await store.getJob(c.req.param('id'));if(!old)return fail(c,404,'JOB_NOT_FOUND','Job tidak ditemukan.');if(old.engine==='suara')return fail(c,409,'PROVIDER_JOB_MANAGED','Status job Suara dikelola oleh provider dan tidak dapat dimajukan secara manual.');if(['succeeded','failed','cancelled'].includes(old.state))return fail(c,409,'JOB_TERMINAL','Job sudah berada pada status akhir.');const item:Job=old.state==='queued'?{...old,state:'running',updatedAt:now()}:{...old,state:'succeeded',updatedAt:now(),output:{kind:'mock',reference:'mock://'+old.projectId+'/'+old.id}};if(!await store.updateJob(item,old.state))return fail(c,409,'JOB_CONFLICT','Job diubah oleh permintaan lain. Muat ulang lalu coba lagi.');return c.json(item);});
+app.route('/api/v1',compositionRoutes);
+app.route('/api/v1',renderRoutes);
 app.notFound(c=>c.json({error:{code:'NOT_FOUND',message:'Endpoint tidak ditemukan.',requestId:c.get('requestId')}},404));
 app.onError((_e,c)=>c.json({error:{code:'INTERNAL_ERROR',message:'Terjadi kesalahan internal.',requestId:c.get('requestId')}},500));
