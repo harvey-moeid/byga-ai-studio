@@ -115,7 +115,7 @@ const job=await getStore(c.env).getJob(c.req.param('id'));
 if(!job)return fail(c,404,'JOB_NOT_FOUND','Job tidak ditemukan.');
 if(job.engine!=='suara'||job.state!=='succeeded'||!job.providerJobId)return fail(c,409,'AUDIO_NOT_READY','Audio belum selesai dibuat.');
 const format=c.req.query('format')==='wav'?'wav':'mp3';
-try{const audio=await suaraAdapter(c.env).getAudio(job.providerJobId,format);return new Response(audio.body,{status:200,headers:{'content-type':format==='mp3'?'audio/mpeg':'audio/wav','cache-control':'private, no-store','x-content-type-options':'nosniff'}});}
+try{const audio=await suaraAdapter(c.env).getAudio(job.providerJobId,format);return new Response(audio.body,{status:200,headers:{'content-type':format==='mp3'?'audio/mpeg':'audio/wav','cache-control':'private, no-store','x-content-type-options':'nosniff',...(format==='wav'?{'content-disposition':`attachment; filename="byga-${job.id}.wav"`}:{})}});}
 catch(error){const status=error instanceof SuaraAdapterError?error.status:502;return fail(c,status===404?404:502,'SUARA_AUDIO_UNAVAILABLE','File audio belum tersedia dari Suara.');}
 });
 app.get('/api/v1/jobs',async c=>{
