@@ -26,6 +26,8 @@ describe('Suara API integration',()=>{
     const job=await created.json() as {id:string;state:string;providerJobId:string};
     expect(job.state).toBe('queued');
     expect(job.providerJobId).toBe(providerId);
+    const manual=await send('/api/v1/jobs/'+job.id+'/advance',{method:'POST'});
+    expect(manual.status).toBe(409);
     const synced=await send('/api/v1/jobs/'+job.id);
     expect(synced.status).toBe(200);
     const completed=await synced.json() as {state:string;output:{kind:string;provider:string;formats:string[]}};
@@ -46,6 +48,10 @@ describe('Suara API integration',()=>{
     const form=new FormData();form.set('projectId',project.id);form.set('text','Halo');form.set('mode','clone');form.set('language','id');form.set('numStep','16');form.set('speed','1');
     const response=await send('/api/v1/suara/jobs',{method:'POST',body:form});
     expect(response.status).toBe(400);
+    expect(fetcher).not.toHaveBeenCalled();
+    form.set('consent','true');
+    const noFile=await send('/api/v1/suara/jobs',{method:'POST',body:form});
+    expect(noFile.status).toBe(400);
     expect(fetcher).not.toHaveBeenCalled();
   });
 
