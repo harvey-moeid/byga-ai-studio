@@ -25,33 +25,5 @@
       "binding": "R2_ASSETS",
       "bucket_name": "byga-ai-studio-assets"
     }
-  ],
-  "env": {
-    "staging": {
-      "name": "byga-ai-studio-staging",
-      "workers_dev": true,
-      "assets": {
-        "directory": "../web/dist",
-        "binding": "ASSETS",
-        "run_worker_first": [
-          "/api/*"
-        ],
-        "not_found_handling": "single-page-application"
-      },
-      "d1_databases": [
-        {
-          "binding": "DB",
-          "database_name": "byga-ai-studio-staging",
-          "database_id": "d533abde-cc6b-43af-90bb-6fdc40715e41",
-          "migrations_dir": "migrations"
-        }
-      ],
-      "r2_buckets": [
-        {
-          "binding": "R2_ASSETS",
-          "bucket_name": "byga-ai-studio-assets"
-        }
-      ]
-    }
-  }
+  ]
 }

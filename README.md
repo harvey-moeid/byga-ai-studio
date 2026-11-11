@@ -64,7 +64,6 @@ Vite runs on port 5173 and proxies /api to Wrangler on 8787. `npm run build` val
 - Dedicated APAC bucket: `byga-ai-studio-assets`; Worker binding: `R2_ASSETS`.
 - Uploads are authenticated, project-scoped, MIME-allowlisted and limited to 25 MiB.
 - D1 stores object keys; downloads are proxied through the authenticated API and the bucket is not public.
-- A separate `byga-ai-studio-staging` Worker/D1 environment is defined; production deployment and migration remain explicitly gated.
 
 ## Documentation
 
