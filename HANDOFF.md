@@ -1,11 +1,11 @@
 # BYGA AI Studio — Session Handoff
 
-**Updated:** 2026-11-11 12:01 WIB
+**Updated:** 2026-11-11 12:06 WIB
 **Repository:** `harvey-moeid/byga-ai-studio`
 **Default branch:** `main`
 **Main HEAD at handoff:** `fec2fb1f91a54430a278336ddf3c3d975501e575`
 **Documentation branch:** `docs/phase-3-production-handoff` (created from the main HEAD above)
-**Open PRs at inspection:** PR #12 (documentation refresh)
+**Open PRs at inspection:** PR #12 (Phase 3 documentation/ADR refresh), PR #13 (runtime persistence status UI)
 **Active phase/subphase:** Phase 3 — Authentication, D1 persistence and engine adapter foundations. Production D1 binding and manual workflows are merged; migrations 0001 and 0002 are APPLIED and independently verified remotely.
 **Production deployment:** NOT performed.
 **Next immediate task:** complete Phase 3 auth secret and UX/runtime verification. Production deployment remains separate and is NOT authorized.
@@ -17,8 +17,10 @@
 - Main HEAD: `fec2fb1f91a54430a278336ddf3c3d975501e575` (merge PR #11).
 - PR #10 merged: production D1 binding and manual migration workflow.
 - PR #11 merged: manual production deploy workflow with D1 migration preflight.
-- PR #12: open; docs branch `docs/phase-3-production-handoff`.
-- Latest observed CI run: #50, completed/success on `main`, URL: https://github.com/harvey-moeid/byga-ai-studio/actions/runs/42961591548
+- PR #12: open; docs branch `docs/phase-3-production-handoff`, head `53e76508be5ba4a955f5f15440a859d633bb2d7a`; 5 documentation files changed.
+- PR #13: open; UI branch `fix/phase-3-persistence-status-ui`, head `a658e0ba72890bc6ab2a8b9865e8bec1cbd41f1e`; `apps/web/src/App.tsx` now displays actual API persistence mode (`d1`, `memory`, or unverified) and Phase 3 mock-engine status.
+- Latest observed CI run: #59, completed/success on `fix/phase-3-persistence-status-ui`, URL: https://github.com/harvey-moeid/byga-ai-studio/actions/runs/42963536273.
+- PR #12 documentation CI run #55 completed/success: https://github.com/harvey-moeid/byga-ai-studio/actions/runs/42963398324.
 - D1 migration workflow run #1 (ID `42961706228`) was a dry-run only. Run #2 (ID `42962819170`) completed/success with all steps, including “Apply migrations (remote)” and post-apply listing, successful.
 - Production D1 database: `byga-ai-studio`, UUID `5b6d6aab-f2f4-4a4d-b6b5-db4b513f6c1e`.
 - Independent read-only remote verification after run #2: `d1_migrations` records `0001_init.sql` and `0002_job_provider_id.sql`, both applied at `2026-11-11 05:00:25`; application tables `projects`, `assets`, and `jobs` and their expected indexes exist.
@@ -102,7 +104,8 @@ PR/push/manual quality gates: gitleaks, Node 22, `npm ci`, lint, typecheck, unit
 ## 5. Verification record
 
 - Main CI run #50: completed/success. This confirms configured CI passed for that run, not manual UX or provider runtime readiness.
-- PR #12 CI run #51: completed/success, 11/11 quality-gate steps successful.
+- PR #12 latest CI run #55: completed/success after ADR refresh.
+- PR #13 initial CI run #57 failed at TypeScript typecheck due an inferred `unknown` health response; corrected with an explicit API response type. Final CI run #59 completed/success. The cancelled duplicate runs #56 and #58 are not failures of the final commit.
 - D1 workflow run #2 (`42962819170`): completed/success; list, apply and post-apply list steps all successful.
 - Independent read-only remote SQL: migration rows for `0001_init.sql` and `0002_job_provider_id.sql`; tables `projects`, `assets`, `jobs` and expected indexes exist.
 - Local migration smoke and Wrangler dry-run were previously reported in the PR #10 handoff; they do not prove remote migration.
@@ -111,8 +114,9 @@ PR/push/manual quality gates: gitleaks, Node 22, `npm ci`, lint, typecheck, unit
 
 ## 6. Exact next actions
 
-1. Review this documentation PR and merge it after CI is green.
-2. Owner verifies GitHub `production` Environment required reviewers and Cloudflare API token scopes.
+1. Review PR #12 (documentation/ADR refresh) and PR #13 (persistence status UI); both remain open and neither has been merged.
+2. Owner decides whether to merge the PRs after reviewing their diffs and green CI.
+3. Verify GitHub `production` Environment required reviewers and Cloudflare API token scopes.
 3. Configure `STUDIO_ACCESS_TOKEN` as a Worker secret using an approved secure path; do not send the secret in chat.
 4. Complete manual login/session review at 360px and desktop.
 5. Verify Remotion/HyperFrames/MCPNEW contracts one at a time with explicit approval for any operation that can mutate legacy systems.
