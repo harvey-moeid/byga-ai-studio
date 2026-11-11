@@ -66,7 +66,7 @@ export class SuaraAdapter {
     if (raw) {
       try {
         const url = new URL(raw);
-        if (url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash) {
+        if (url.protocol === 'https:' && url.pathname === '/' && !url.username && !url.password && !url.search && !url.hash) {
           this.baseUrl = url.toString().replace(/\/+$/, '');
         }
       } catch {
