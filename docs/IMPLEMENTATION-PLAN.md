@@ -10,26 +10,35 @@ Remaining gates: runtime OAuth/MCP handshake; exact HyperFrames base URL; author
 
 ## Phase 1 — Repository foundation
 
-**Status:** merged to main in PR #3 after Phase 0 baseline. npm ci, secret scanning, lint, typecheck, tests, build and dev proxy smoke are in CI. See PHASE-1-FOUNDATION.md.
+**Status:** merged to main in PR #3. npm ci, secret scanning, lint, typecheck, tests, build and dev proxy smoke are in CI. See PHASE-1-FOUNDATION.md.
 
 ## Phase 2 — Core platform
 
-**Status:** implemented on feat/phase-2-core-platform; final verification pending.
+**Status:** merged to main in PR #4.
 
 - Responsive dashboard, summary metrics, recent jobs and engine registry.
 - Project create/list/rename/archive.
 - Asset metadata register/list/remove with project association and validation; no binary upload.
 - Normalized job center with a complete mock lifecycle.
 - HyperFrames/Remotion mock adapters only; explicit blocked/unverified provider states.
-- Mock mode is volatile and not production-safe.
+- Mock mode is volatile when D1 is not bound.
 
-**Exit gate:** CI passes and mock workflow/mobile acceptance is reviewed.
+## Phase 3 — Authentication, persistence and engine adapter foundations
 
-## Phase 3 — Engine adapters
+**Status:** authentication and D1 store are merged (PR #5 and #6). Remotion adapter foundation is in progress on its own branch; it is feature-flagged off and not wired to API routes.
 
-Integrate one at a time only after verified contracts: Suara; HyperFrames; Remotion; MCPNEW. Document auth/schema, validate runtime I/O, add contract tests, timeouts/retry/idempotency/error mapping, prove output retrieval and preserve standalone operation.
+- [x] Single-operator authentication and stateless session cookie.
+- [x] D1 Store boundary, initial schema and SQLite-backed tests.
+- [ ] D1 database provisioning, binding and remote migration (requires explicit production-resource approval).
+- [ ] Wrangler D1 local-runtime smoke.
+- [x] Remotion isolated client foundation, default-off feature flag, timeout, bounded read retry and fixture tests (CI passed in PR #7 run #39; PR remains open with one unresolved P2 timeout/body-consumption review finding).
+- [ ] Manual login review at 360 px and desktop.
+- [ ] Remotion runtime contract and base URL verification (requires authorized, non-mutating test).
+- [ ] HyperFrames adapter foundation after exact deployed URL verification.
+- [ ] MCPNEW MCP/OAuth client flow after explicit OAuth registration approval.
+- [ ] Suara remains blocked pending rights-compatible model/license decision.
 
-## Phase 4 — Unified workflows
+## Phase 4 — Unified creation workflows
 
 Project-based audio/video creation, supported options, secure asset selection/upload, progress/retry, output preview/download and accessibility review.
 
