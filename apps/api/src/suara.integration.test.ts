@@ -61,13 +61,24 @@ describe('Suara API integration',()=>{
     expect(fetcher).not.toHaveBeenCalled();
   });
 
-  it('does not expose Suara configuration details or credentials in engine status',async()=>{
-    const fetcher=vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({quotaUsed:0,quotaMax:20,maxChars:1500,rtfByStep:{}}),{status:200,headers:{'content-type':'application/json'}}));
+  it('reports configured credentials without making a provider request on every dashboard refresh',async()=>{
+    const fetcher=vi.fn<typeof fetch>();
     vi.stubGlobal('fetch',fetcher);
     const response=await send('/api/v1/engines');
     const engines=await response.json() as Array<{key:string;status:string;description:string}>;
     const suara=engines.find(e=>e.key==='suara');
     expect(suara?.status).toBe('configured');
+    expect(suara?.description).toContain('belum diuji');
     expect(JSON.stringify(suara)).not.toContain('server-only-passcode');
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('exposes an explicit authenticated Suara connectivity check',async()=>{
+    const fetcher=vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({quotaUsed:0,quotaMax:20,maxChars:1500,rtfByStep:{}}),{status:200,headers:{'content-type':'application/json'}}));
+    vi.stubGlobal('fetch',fetcher);
+    const response=await send('/api/v1/engines/suara/health');
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({status:'configured'});
+    expect(fetcher).toHaveBeenCalledTimes(1);
   });
 });
