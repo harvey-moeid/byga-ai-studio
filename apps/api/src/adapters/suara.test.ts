@@ -16,7 +16,7 @@ describe('Suara adapter',()=>{
 
   it('fails closed for invalid or non-HTTPS provider URLs',async()=>{
     const fetcher=vi.fn<typeof fetch>();
-    for(const baseUrl of ['http://example.com','https://user:pass@example.com','https://example.com/path?token=x','not-a-url']){
+    for(const baseUrl of ['http://example.com','https://user:pass@example.com','https://example.com/path','https://example.com/path?token=x','not-a-url']){
       const adapter=new SuaraAdapter({enabled:true,baseUrl,passcode:'secret',fetcher});
       expect(adapter.configured).toBe(false);
       expect((await adapter.healthCheck()).status).toBe('disabled');
