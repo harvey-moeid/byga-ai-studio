@@ -33,7 +33,7 @@ React, TypeScript, Vite, Hono on Cloudflare Workers, Zod, npm workspaces, Vitest
 
 ## Mock-mode and integration limits
 
-Records can still be volatile when D1 is not bound in the runtime. Asset records contain metadata only; no files are uploaded or stored. Mock job outputs are not generated media. No external provider is contacted by mock adapters, and engine cards do not report live provider health.
+Records can still be volatile when D1 is not bound in the runtime. Project assets are uploaded to a private, project-scoped Cloudflare R2 bucket; downloads pass through the authenticated API. Mock job outputs are not generated media. No external provider is contacted by mock adapters, and engine cards do not report live provider health.
 
 ## Local development
 
@@ -58,6 +58,12 @@ Vite runs on port 5173 and proxies /api to Wrangler on 8787. `npm run build` val
 - Studio API health is not provider health.
 - No production route/domain or secret is assumed configured.
 - Do not modify MCPNEW, HyperFrames, Remotion or Suara repositories without separate approval.
+
+## R2 asset storage
+
+- Dedicated APAC bucket: `byga-ai-studio-assets`; Worker binding: `R2_ASSETS`.
+- Uploads are authenticated, project-scoped, MIME-allowlisted and limited to 25 MiB.
+- D1 stores object keys; downloads are proxied through the authenticated API and the bucket is not public.
 
 ## Documentation
 

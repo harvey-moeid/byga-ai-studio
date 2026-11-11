@@ -74,7 +74,15 @@ npm ci, secret scanning, lint, typecheck, tests, build and dev proxy smoke are i
 
 ## Phase 4 — Unified creation workflows
 
-Project-based audio/video creation, supported options, secure asset selection/upload, progress/retry, output preview/download and accessibility review.
+**Status:** in progress; first 4.1 creation slice implemented on `feat/phase-4-unified-workflows`. See `PHASE-4-CREATION-WORKFLOWS.md`.
+
+- [x] Unified project-scoped audio/video creation launcher and standardized forms.
+- [x] Video configuration saved as simulation jobs only; no unverified provider dispatch.
+- [x] Suara TTS creation uses the existing server-side, opt-in provider adapter.
+- [x] Existing audio preview/download and job status refresh surfaced from the creation flow.
+- [x] Private R2 asset upload/storage and authenticated retrieval implemented.
+- [ ] Unified progress/retry orchestration and verified video output management.
+- [ ] Manual accessibility acceptance on desktop and 360px mobile.
 
 ## Phase 5 — Production hardening and launch
 

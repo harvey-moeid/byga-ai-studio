@@ -71,9 +71,44 @@ app.post('/api/v1/projects',async c=>{const store=getStore(c.env);const p=await 
 app.get('/api/v1/projects/:id',async c=>{const p=await getStore(c.env).getProject(c.req.param('id'));return p?c.json(p):fail(c,404,'PROJECT_NOT_FOUND','Project tidak ditemukan.');});
 app.patch('/api/v1/projects/:id',async c=>{const store=getStore(c.env);const old=await store.getProject(c.req.param('id'));if(!old)return fail(c,404,'PROJECT_NOT_FOUND','Project tidak ditemukan.');const p=await readBody(c.req.raw,UpdateProjectInputSchema);if(!p.ok)return fail(c,400,'VALIDATION_ERROR','Perubahan project tidak valid.');const item:Project={...old,...p.data,updatedAt:now()};await store.updateProject(item);return c.json(item);});
 app.delete('/api/v1/projects/:id',async c=>{const store=getStore(c.env);const old=await store.getProject(c.req.param('id'));if(!old)return fail(c,404,'PROJECT_NOT_FOUND','Project tidak ditemukan.');const item:Project={...old,archived:true,updatedAt:now()};await store.updateProject(item);return c.json(item);});
+
+const MAX_ASSET_BYTES=25*1024*1024;
+const ALLOWED_ASSET_TYPES:Record<string,Asset['type']>={
+'image/jpeg':'image','image/png':'image','image/webp':'image','image/gif':'image',
+'audio/mpeg':'audio','audio/wav':'audio','audio/x-wav':'audio','audio/ogg':'audio','audio/webm':'audio',
+'video/mp4':'video','video/webm':'video','video/quicktime':'video',
+'application/pdf':'document','text/plain':'document'
+};
+function safeFilename(value:string){const name=value.normalize('NFKC').replace(/[\\/\\\\\\u0000-\\u001f\\u007f]/g,'_').replace(/[^\\p{L}\\p{N}._ -]/gu,'_').trim().slice(0,120);return name&&name!=='.'&&name!=='..'?name:'asset';}
 app.get('/api/v1/assets',async c=>c.json(await getStore(c.env).listAssets(c.req.query('projectId')||undefined)));
+app.post('/api/v1/assets/upload',async c=>{
+ const bucket=c.env.R2_ASSETS;if(!bucket)return fail(c,503,'ASSET_STORAGE_NOT_CONFIGURED','Penyimpanan R2 belum terikat pada Worker ini.');
+ const length=Number(c.req.header('content-length')??0);if(length>MAX_ASSET_BYTES+1024*1024)return fail(c,413,'ASSET_TOO_LARGE','Ukuran upload maksimal 25 MiB.');
+ let form:FormData;try{form=await c.req.formData();}catch{return fail(c,400,'INVALID_UPLOAD','Form upload tidak valid.');}
+ const projectId=String(form.get('projectId')??''),file=form.get('file');
+ const store=getStore(c.env);if(!await activeProject(store,projectId))return fail(c,404,'PROJECT_NOT_FOUND','Project aktif tidak ditemukan.');
+ if(!(file instanceof File)||file.size<1)return fail(c,400,'FILE_REQUIRED','Pilih file yang akan diunggah.');
+ if(file.size>MAX_ASSET_BYTES)return fail(c,413,'ASSET_TOO_LARGE','Ukuran upload maksimal 25 MiB.');
+ const mimeType=file.type.toLowerCase(),type=ALLOWED_ASSET_TYPES[mimeType];if(!type)return fail(c,400,'UNSUPPORTED_FILE_TYPE','Jenis file tidak didukung. Gunakan gambar, audio, video, PDF, atau teks yang diizinkan.');
+ const name=safeFilename(file.name),id=makeId('ast_'),objectKey='projects/'+projectId+'/assets/'+id+'/'+name;
+ const bytes=await file.arrayBuffer(),digest=await crypto.subtle.digest('SHA-256',bytes),checksum=[...new Uint8Array(digest)].map(v=>v.toString(16).padStart(2,'0')).join('');
+ try{
+  await bucket.put(objectKey,bytes,{httpMetadata:{contentType:mimeType,contentDisposition:'attachment; filename="'+name.replace(/"/g,'')+'"'},customMetadata:{projectId,assetId:id,checksum}});
+  const item:Asset={id,projectId,name,mimeType,size:file.size,type,checksum,createdAt:now(),storage:'r2',objectKey};
+  try{await store.createAsset(item);}catch(error){await bucket.delete(objectKey);throw error;}
+  return c.json(item,201);
+ }catch{return fail(c,502,'ASSET_STORAGE_FAILED','File tidak berhasil disimpan. Metadata tidak dibuat.');}
+});
+app.get('/api/v1/assets/:id/content',async c=>{
+ const store=getStore(c.env),asset=await store.getAsset(c.req.param('id'));if(!asset)return fail(c,404,'ASSET_NOT_FOUND','Asset tidak ditemukan.');
+ if(asset.storage!=='r2'||!asset.objectKey)return fail(c,404,'ASSET_CONTENT_NOT_FOUND','File fisik tidak tersedia untuk asset ini.');
+ const bucket=c.env.R2_ASSETS;if(!bucket)return fail(c,503,'ASSET_STORAGE_NOT_CONFIGURED','Penyimpanan R2 belum terikat pada Worker ini.');
+ const object=await bucket.get(asset.objectKey);if(!object)return fail(c,404,'ASSET_CONTENT_NOT_FOUND','File fisik tidak ditemukan di R2.');
+ const headers=new Headers();object.writeHttpMetadata(headers);headers.set('content-type',asset.mimeType);headers.set('content-length',String(asset.size));headers.set('content-disposition','attachment; filename="'+asset.name.replace(/["\\r\\n]/g,'_')+'"');headers.set('cache-control','private, no-store');headers.set('x-content-type-options','nosniff');
+ return new Response(object.body,{headers});
+});
 app.post('/api/v1/assets',async c=>{const store=getStore(c.env);const p=await readBody(c.req.raw,CreateAssetInputSchema);if(!p.ok)return fail(c,400,'VALIDATION_ERROR','Metadata asset tidak valid atau ukuran melebihi 25 MiB.');if(!await activeProject(store,p.data.projectId))return fail(c,404,'PROJECT_NOT_FOUND','Project aktif tidak ditemukan.');const item:Asset={id:makeId('ast_'),...p.data,createdAt:now(),storage:'metadata-only'};await store.createAsset(item);return c.json(item,201);});
-app.delete('/api/v1/assets/:id',async c=>{const id=c.req.param('id');if(!await getStore(c.env).deleteAsset(id))return fail(c,404,'ASSET_NOT_FOUND','Asset tidak ditemukan.');return c.json({deleted:true,id});});
+app.delete('/api/v1/assets/:id',async c=>{const store=getStore(c.env),asset=await store.getAsset(c.req.param('id'));if(!asset)return fail(c,404,'ASSET_NOT_FOUND','Asset tidak ditemukan.');if(asset.objectKey){const bucket=c.env.R2_ASSETS;if(!bucket)return fail(c,503,'ASSET_STORAGE_NOT_CONFIGURED','Penyimpanan R2 belum terikat pada Worker ini.');try{await bucket.delete(asset.objectKey);}catch{return fail(c,502,'ASSET_DELETE_FAILED','File belum dapat dihapus dari R2. Metadata dipertahankan.');}}const deleted=await store.deleteAsset(asset.id);if(!deleted)return fail(c,409,'ASSET_DELETE_CONFLICT','Asset berubah saat proses penghapusan.');return c.json({deleted:true,id:asset.id});});
 app.post('/api/v1/suara/jobs',async c=>{
 const store=getStore(c.env),adapter=suaraAdapter(c.env);
 if(!adapter.configured)return fail(c,503,'SUARA_NOT_CONFIGURED','Integrasi Suara belum diaktifkan atau konfigurasi server belum lengkap.');
