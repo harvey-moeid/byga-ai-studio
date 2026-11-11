@@ -44,6 +44,18 @@ const safeMessage = (body: unknown) => {
   return 'Remotion request failed.';
 };
 
+/** Releases an unused response body. Runs inside the request timeout window. */
+const discardBody = async (response: Response): Promise<void> => {
+  await response.body?.cancel().catch(() => undefined);
+};
+
+/** Only transient failures of a read are worth a bounded retry. */
+const isRetryableReadError = (error: unknown): boolean => {
+  if (error instanceof AdapterHttpError) return error.status >= 500;
+  if (error instanceof AdapterConfigurationError || error instanceof AdapterDisabledError) return false;
+  return true;
+};
+
 export class RemotionAdapter {
   private readonly enabled: boolean;
   private readonly baseUrl?: string;
@@ -64,7 +76,19 @@ export class RemotionAdapter {
     if (!this.baseUrl) throw new AdapterConfigurationError('Remotion base URL is not configured.');
   }
 
-  private async request(path: string, init: RequestInit = {}, retryRead = false): Promise<Response> {
+  /**
+   * Owns the full request lifecycle: the timeout covers fetch, the error-body read and the
+   * caller-supplied `consume` step (response body parsing). The timer is cleared only in `finally`,
+   * after the body has been consumed, so a provider that sends headers and then stalls is aborted.
+   * Only reads (`retryRead`) are retried, and only for transient failures; mutating calls are
+   * always single-attempt because the provider has no idempotency contract.
+   */
+  private async request<T>(
+    path: string,
+    init: RequestInit,
+    retryRead: boolean,
+    consume: (response: Response) => Promise<T>
+  ): Promise<T> {
     this.assertEnabled();
     const attempts = retryRead ? this.readRetries + 1 : 1;
     let lastError: unknown;
@@ -73,13 +97,14 @@ export class RemotionAdapter {
       const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
       try {
         const response = await this.fetcher(`${this.baseUrl}${path}`, { ...init, signal: controller.signal });
-        if (retryRead && response.status >= 500 && attempt + 1 < attempts) continue;
-        if (!response.ok) throw new AdapterHttpError(response.status, safeMessage(await response.clone().json().catch(() => null)));
-        return response;
+        if (!response.ok) {
+          throw new AdapterHttpError(response.status, safeMessage(await response.json().catch(() => null)));
+        }
+        // `await` is required here: returning the bare promise would run `finally` before parsing ends.
+        return await consume(response);
       } catch (error) {
         lastError = error;
-        if (error instanceof AdapterHttpError && error.status < 500) throw error;
-        if (attempt + 1 >= attempts) throw error;
+        if (!retryRead || attempt + 1 >= attempts || !isRetryableReadError(error)) throw error;
       } finally {
         clearTimeout(timeout);
       }
@@ -92,8 +117,11 @@ export class RemotionAdapter {
     if (!this.baseUrl) return { status: 'unconfigured', reason: 'base-url-missing' };
     const checkedAt = new Date().toISOString();
     try {
-      const response = await this.request('/', { method: 'GET' }, true);
-      return { status: 'reachable', checkedAt, httpStatus: response.status };
+      const httpStatus = await this.request('/', { method: 'GET' }, true, async (response) => {
+        await discardBody(response);
+        return response.status;
+      });
+      return { status: 'reachable', checkedAt, httpStatus };
     } catch (error) {
       return { status: 'unreachable', checkedAt, reason: error instanceof Error ? error.message : 'Unknown error' };
     }
@@ -101,31 +129,34 @@ export class RemotionAdapter {
 
   /** Submit is deliberately single-attempt: the provider has no idempotency contract. */
   async submitJob(job: RemotionJob): Promise<{ providerJobId: string }> {
-    const response = await this.request('/api/render', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(job)
-    });
-    const body: unknown = await response.json();
-    if (!body || typeof body !== 'object' || !('jobId' in body) || typeof body.jobId !== 'string' || !body.jobId) {
-      throw new AdapterConfigurationError('Remotion returned an invalid submit response.');
-    }
-    return { providerJobId: body.jobId };
+    return this.request(
+      '/api/render',
+      { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(job) },
+      false,
+      async (response) => {
+        const body: unknown = await response.json();
+        if (!body || typeof body !== 'object' || !('jobId' in body) || typeof body.jobId !== 'string' || !body.jobId) {
+          throw new AdapterConfigurationError('Remotion returned an invalid submit response.');
+        }
+        return { providerJobId: body.jobId };
+      }
+    );
   }
 
   async getJob(providerJobId: string): Promise<RemotionJobStatus> {
     if (!/^[A-Za-z0-9_-]{1,128}$/.test(providerJobId)) throw new AdapterConfigurationError('Invalid Remotion job identifier.');
-    const response = await this.request(`/api/jobs/${encodeURIComponent(providerJobId)}`, { method: 'GET' }, true);
-    const body: unknown = await response.json();
-    if (!body || typeof body !== 'object' || !('jobId' in body) || typeof body.jobId !== 'string' || !('status' in body) || typeof body.status !== 'string') {
-      throw new AdapterConfigurationError('Remotion returned an invalid job response.');
-    }
-    return body as RemotionJobStatus;
+    return this.request(`/api/jobs/${encodeURIComponent(providerJobId)}`, { method: 'GET' }, true, async (response) => {
+      const body: unknown = await response.json();
+      if (!body || typeof body !== 'object' || !('jobId' in body) || typeof body.jobId !== 'string' || !('status' in body) || typeof body.status !== 'string') {
+        throw new AdapterConfigurationError('Remotion returned an invalid job response.');
+      }
+      return body as RemotionJobStatus;
+    });
   }
 
   /** Cancellation is single-attempt; do not replay a mutating request after an ambiguous timeout. */
   async cancelJob(providerJobId: string): Promise<void> {
     if (!/^[A-Za-z0-9_-]{1,128}$/.test(providerJobId)) throw new AdapterConfigurationError('Invalid Remotion job identifier.');
-    await this.request(`/api/jobs/${encodeURIComponent(providerJobId)}/cancel`, { method: 'POST' });
+    await this.request(`/api/jobs/${encodeURIComponent(providerJobId)}/cancel`, { method: 'POST' }, false, discardBody);
   }
 }
