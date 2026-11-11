@@ -111,7 +111,10 @@ export class SuaraAdapter {
     const checkedAt = new Date().toISOString();
     try {
       // /api/meta is protected and reads D1, so this checks URL, passcode and the Suara API's D1 path.
-      await this.json<{ quotaUsed: number; quotaMax: number; maxChars: number; rtfByStep: Record<string, number> }>('/api/meta');
+      const meta = await this.json<{ quotaUsed?: unknown; quotaMax?: unknown; maxChars?: unknown; rtfByStep?: unknown }>('/api/meta');
+      if (typeof meta.quotaUsed !== 'number' || typeof meta.quotaMax !== 'number' || typeof meta.maxChars !== 'number' || !meta.rtfByStep || typeof meta.rtfByStep !== 'object') {
+        throw new SuaraAdapterError(502, 'Suara returned invalid metadata.');
+      }
       return { status: 'configured', checkedAt };
     } catch (error) {
       return { status: 'unreachable', checkedAt, reason: error instanceof SuaraAdapterError ? error.message : 'Suara is unreachable.' };
@@ -140,6 +143,7 @@ export class SuaraAdapter {
     if (!/^[0-9a-f-]{36}$/i.test(providerJobId)) throw new SuaraAdapterError(400, 'Invalid Suara job identifier.');
     const body = await this.json<Record<string, unknown>>('/api/jobs/' + encodeURIComponent(providerJobId));
     const status = body.status;
+    if (body.id !== providerJobId) throw new SuaraAdapterError(502, 'Suara returned a mismatched job identifier.');
     if (!['queued', 'running', 'done', 'failed'].includes(String(status))) {
       throw new SuaraAdapterError(502, 'Suara returned an invalid job status.');
     }
