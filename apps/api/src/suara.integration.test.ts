@@ -29,9 +29,10 @@ describe('Suara API integration',()=>{
     expect(job.providerJobId).toBe(providerId);
     const manual=await send('/api/v1/jobs/'+job.id+'/advance',{method:'POST'});
     expect(manual.status).toBe(409);
-    const synced=await send('/api/v1/jobs/'+job.id);
+    const synced=await send('/api/v1/jobs');
     expect(synced.status).toBe(200);
-    const completed=await synced.json() as {state:string;output:{kind:string;provider:string;formats:string[]}};
+    const listed=await synced.json() as Array<{id:string;state:string;output:{kind:string;provider:string;formats:string[]}} >;
+    const completed=listed.find(item=>item.id===job.id)!;
     expect(completed.state).toBe('succeeded');
     expect(completed.output).toMatchObject({kind:'audio',provider:'suara',formats:['mp3','wav']});
     const audio=await send('/api/v1/jobs/'+job.id+'/audio?format=mp3');
