@@ -12,7 +12,7 @@ const makeId=(prefix:string)=>prefix+crypto.randomUUID().replace(/-/g,'').slice(
 const validProject=(id:string)=>/^prj_[a-zA-Z0-9_-]{8,64}$/.test(id);
 const validComposition=(id:string)=>/^cmp_[a-zA-Z0-9_-]{8,64}$/.test(id);
 const cleanName=(value:string)=>Array.from(value.normalize('NFKC'),ch=>{const code=ch.charCodeAt(0);return code<32||code===127?' ':ch;}).join('').trim().slice(0,120);
-function sourceRules(engine:string,source:string){if(engine==='hyperframes')return source.length>0&&new TextEncoder().encode(source).byteLength<=256*1024?null:'HyperFrames source wajib diisi dan maksimal 256 KiB.';if(engine==='remotion')return source.length>0&&source.length<=100000&&/export\s+default/.test(source)?null:'Remotion source wajib memiliki export default dan maksimal 100.000 karakter.';return 'Engine tidak didukung.';}
+function sourceRules(engine:string,source:string){if(engine==='hyperframes')return source.length>0&&new TextEncoder().encode(source).byteLength<=256*1024?null:'HyperFrames source wajib diisi dan maksimal 256 KiB.';if(engine==='remotion')return source.length>0&&source.length<=100000&&new TextEncoder().encode(source).byteLength<=262144&&/export\s+default/.test(source)?null:'Remotion source wajib memiliki export default, maksimal 100.000 karakter, dan maksimal 256 KiB UTF-8.';return 'Engine tidak didukung.';}
 async function digest(source:string){const bytes=new TextEncoder().encode(source);const hash=await crypto.subtle.digest('SHA-256',bytes);return [...new Uint8Array(hash)].map(v=>v.toString(16).padStart(2,'0')).join('');}
 async function projectExists(db:D1Database,id:string){return !!await db.prepare('SELECT id FROM projects WHERE id=? AND archived=0').bind(id).first();}
 async function readJson(c:RouteContext){try{return await c.req.json() as Record<string,unknown>;}catch{return null;}}
@@ -66,7 +66,7 @@ routes.post('/compositions/:id/versions',async c=>{
  const id=c.req.param('id'),body=await readJson(c);if(!validComposition(id)||!body)return c.json(jsonError('Permintaan tidak valid.','VALIDATION_ERROR'),400);
  const row=await db.prepare('SELECT id,project_id,engine,name,current_version,archived,created_at,updated_at FROM compositions WHERE id=? AND archived=0').bind(id).first<CompositionRow>();if(!row)return c.json(jsonError('Komposisi tidak ditemukan.','COMPOSITION_NOT_FOUND'),404);
  const source=typeof body.source==='string'?body.source:'',issue=sourceRules(row.engine,source);if(issue)return c.json(jsonError(issue,'SOURCE_INVALID'),400);
- const version=row.current_version+1,ext=row.engine==='hyperframes'?'html':'tsx',key='compositions/'+row.project_id+'/'+id+'/v'+version+'.'+ext,sha=await digest(source),bytes=new TextEncoder().encode(source),created=now(),versionId=makeId('cv_');
+ const version=row.current_version+1,ext=row.engine==='hyperframes'?'html':'tsx',versionId=makeId('cv_'),key='compositions/'+row.project_id+'/'+id+'/v'+version+'-'+versionId+'.'+ext,sha=await digest(source),bytes=new TextEncoder().encode(source),created=now();
  try{
   await bucket.put(key,bytes,{httpMetadata:{contentType:row.engine==='hyperframes'?'text/html; charset=utf-8':'text/plain; charset=utf-8'},customMetadata:{projectId:row.project_id,compositionId:id,version:String(version),sha256:sha}});
   await db.prepare('INSERT INTO composition_versions (id,composition_id,version,r2_key,size,sha256,note,created_at) VALUES (?,?,?,?,?,?,?,?)').bind(versionId,id,version,key,bytes.byteLength,sha,typeof body.note==='string'?body.note.slice(0,500):null,created).run();
