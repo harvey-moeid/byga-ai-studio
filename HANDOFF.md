@@ -42,7 +42,7 @@ Source audit reference: `docs/API-CONTRACT.md`, Remotion commit `26a8198a0f85f92
 - Source-level routes: `GET /`, `POST /api/render`, `GET /api/jobs/:id`, `POST /api/jobs/:id/cancel`.
 - Submit/status/cancel and output routes were source-inspected only; no live request has been made.
 - Legacy submit dispatches a GitHub workflow and writes job/output state to legacy KV/R2.
-- The adapter package defaults to disabled; base URL must be supplied explicitly; it is not wired into API routes.
+- The adapter defaults to disabled; base URL must be supplied explicitly; it is not wired into API routes.
 - GET calls have timeout and bounded retries. Submit/cancel are single-attempt because no idempotency contract was found.
 - Fixture tests use injected fetch and reserved `.invalid` hosts; they must never call legacy services.
 - Migration 0002 adds `provider_job_id`; do not edit migration 0001.
@@ -61,7 +61,7 @@ Source audit reference: `docs/API-CONTRACT.md`, Remotion commit `26a8198a0f85f92
 Current work branch: `feat/phase-3-remotion-adapter-foundation`, based on main commit above.
 
 Next:
-1. Inspect branch diff and ensure migration 0002, adapter package and tests are present exactly once.
+1. Inspect branch diff and ensure migration 0002, adapter source/tests and docs are present exactly once.
 2. Open/inspect PR into main.
 3. Wait for PR CI and fix any failures on the same branch.
 4. Merge only after CI passes; do not deploy.
@@ -73,7 +73,7 @@ Next:
 - `apps/api/src/store.ts` — Store supports provider job ID persistence in memory and D1.
 - `apps/api/migrations/0002_job_provider_id.sql` — additive column and index.
 - `apps/api/test/d1-store.test.ts` — applies both migrations and tests provider ID round-trip.
-- `packages/adapters/package.json`, `packages/adapters/tsconfig.json`, `packages/adapters/src/index.ts`, `packages/adapters/src/remotion.test.ts` — isolated default-off Remotion client and fixture tests.
+- `apps/api/src/adapters/remotion.ts`, `apps/api/src/adapters/remotion.test.ts` — isolated default-off Remotion client and fixture tests.
 - `docs/PHASE-3-REMOTION-FOUNDATION.md`, `docs/PHASE-3-PERSISTENCE.md`, `docs/IMPLEMENTATION-PLAN.md`, `HANDOFF.md` — decisions and handoff updated.
 
 ## Verification and unresolved errors

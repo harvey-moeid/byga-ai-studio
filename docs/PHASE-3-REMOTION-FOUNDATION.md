@@ -10,11 +10,11 @@ The source audit in `docs/API-CONTRACT.md` identifies the Remotion Worker routes
 - `GET /api/jobs/:id` status
 - `POST /api/jobs/:id/cancel` cancel
 
-The audited source revision is `26a8198a0f85f92afdb45db690ee8c9529c87e06`. The configured URL in the source workflow is `https://remotion-api.harveymoeid.workers.dev`, but current deployed hostname, runtime response, and operational authorization have not been independently re-verified. No live request was made.
+The audited source revision is `26a8198a0f85f92afdb45db690ee8c9529c87e06`. The workflow source contains `https://remotion-api.harveymoeid.workers.dev`, but current deployed hostname, runtime response and operational authorization have not been independently re-verified. No live request was made.
 
 ## Safety decisions
 
-- Adapter package is isolated under `packages/adapters`; no provider call is wired into the Studio API.
+- Adapter is isolated under `apps/api/src/adapters/remotion.ts`; no provider call is wired into Studio API routes.
 - Constructor requires `enabled: true`; default is disabled and makes no network requests.
 - Base URL must be supplied explicitly after runtime verification; no production URL is hard-coded.
 - Read-only GET requests have a timeout and at most two retries (default one).
@@ -32,4 +32,4 @@ The audited source revision is `26a8198a0f85f92afdb45db690ee8c9529c87e06`. The c
 
 ## Tests
 
-`packages/adapters/src/remotion.test.ts` covers disabled-by-default, missing base URL, submit response parsing, no submit retry, bounded read retry, job ID validation and no cancellation retry. D1 store tests apply migrations 0001 and 0002 to SQLite and round-trip provider job IDs. CI is the authoritative execution environment for this branch.
+`apps/api/src/adapters/remotion.test.ts` covers disabled-by-default, missing base URL, submit response parsing, no submit retry, bounded read retry, job ID validation and no cancellation retry. D1 store tests apply migrations 0001 and 0002 to SQLite and round-trip provider job IDs. CI is the authoritative execution environment for this branch.
