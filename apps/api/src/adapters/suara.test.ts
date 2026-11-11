@@ -54,7 +54,7 @@ describe('Suara adapter',()=>{
   });
 
   it('maps provider status and audio metadata',async()=>{
-    const fetcher=vi.fn<typeof fetch>().mockResolvedValue(json({status:'done',mode:'auto',progress:{done:2,total:2},audioSec:12.5,elapsedSec:4,rtf:0.32}));
+    const fetcher=vi.fn<typeof fetch>().mockResolvedValue(json({id:'123e4567-e89b-12d3-a456-426614174000',status:'done',mode:'auto',progress:{done:2,total:2},audioSec:12.5,elapsedSec:4,rtf:0.32}));
     const adapter=new SuaraAdapter({enabled:true,baseUrl:'https://suara.example',passcode:'secret',fetcher});
     await expect(adapter.getJob('123e4567-e89b-12d3-a456-426614174000')).resolves.toMatchObject({status:'done',audioSec:12.5,progress:{done:2,total:2}});
   });
