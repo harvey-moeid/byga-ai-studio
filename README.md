@@ -2,80 +2,63 @@
 
 Unified workspace for AI-assisted audio and video production.
 
-> **Current status:** Phase 1 — repository foundation.  
-> **Deployment policy:** Production only; no preview/staging deployment. Production release requires explicit owner approval.
+> Current status: Phase 2 — Core Platform (mock mode).  
+> Deployment: production only; no preview/staging. Production release requires explicit owner approval.
 
 ## Product direction
 
-BYGA AI Studio is the control plane for projects, assets, workflows and jobs across independent audio/video engines. It will connect to MCPNEW, HyperFrames, Remotion and Suara through isolated adapters only after their contracts, authentication, output access and licensing are verified.
-
-The four legacy repositories remain independent and must not be modified by work in this repository.
+BYGA AI Studio is the control plane for projects, assets, workflows and jobs across independent audio/video engines. It connects to MCPNEW, HyperFrames, Remotion and Suara through isolated adapters only after contracts, authentication, output access and licensing are verified. Legacy repositories remain independent.
 
 ## Stack
 
-- Web: React, TypeScript, Vite
-- API: Cloudflare Workers, Hono
-- Contracts: Zod
-- Tests: Vitest
-- Workspace: npm workspaces
-- CI: GitHub Actions
+React, TypeScript, Vite, Hono on Cloudflare Workers, Zod, npm workspaces, Vitest and GitHub Actions.
 
-## Repository layout
+## Phase 2 features
 
-```text
-apps/
-  api/                 Hono Worker and Wrangler configuration
-  web/                 React + Vite frontend
-packages/
-  contracts/           Shared Zod schemas and TypeScript types
-docs/
-  PHASE-1-FOUNDATION.md
-  ...                  Product, architecture and integration audits
-.github/workflows/
-  ci.yml
-```
+- Dashboard metrics, recent jobs and engine registry.
+- Project create, rename and archive.
+- Asset metadata register/list/remove (no binary upload).
+- Normalized job center with queued → running → succeeded mock lifecycle.
+- Mock adapters for HyperFrames and Remotion.
+- Explicit disabled/unverified states for Suara and MCPNEW.
+- Responsive desktop and mobile layouts.
+
+## Mock-mode limits
+
+Records live in process memory and can disappear on Worker restart or isolate changes. Asset records contain metadata only; no files are uploaded or stored. Job output is a mock:// reference, not generated media. No external provider is contacted, no credentials are configured, and engine cards do not report live provider health. Do not deploy this mock API as a production multi-user service.
 
 ## Local development
 
 Requirements: Node.js 22+ and npm 10+.
 
 ```bash
-npm ci                                 # reproducible install from package-lock.json (use npm install only when changing dependencies)
-npm run build --workspace=@byga/web   # once; Wrangler serves apps/web/dist as assets
-npm run dev:api                        # Wrangler on 127.0.0.1:8787
-npm run dev                            # Vite on 5173, proxies /api to Wrangler
-npm run smoke:dev                      # automated end-to-end check of the proxy
+npm ci
+npm run build --workspace=@byga/web
+npm run dev:api
+npm run dev
+npm run smoke:dev
+npm run check
 ```
 
-The frontend calls the same-origin `/api/v1/health` endpoint; in development Vite proxies `/api` to Wrangler (override target with `BYGA_API_ORIGIN`). Run quality checks with:
-
-```bash
-npm run lint
-npm run typecheck
-npm test
-npm run build
-```
-
-`npm run build` builds the web app and runs a Wrangler dry run. It does not deploy.
+Vite runs on port 5173 and proxies /api to Wrangler on 8787. npm run build validates the web build and Wrangler dry-run only; it does not deploy.
 
 ## Integration safety
 
-- Provider adapters are not enabled in Phase 1.
-- No provider credentials are stored in frontend code.
-- No external render/audio submit, asset upload, cancellation or workflow dispatch is performed.
-- Studio health is not a proxy for legacy provider health.
-- No production domain, Cloudflare account ID, resource ID or secret is guessed.
-- Do not change MCPNEW, HyperFrames, Remotion or Suara repositories without separate approval.
+- Provider adapters are not enabled; mock adapters never call external engines.
+- No provider credentials in frontend or source control.
+- No external render/audio submit, asset upload, cancellation or workflow dispatch.
+- Studio API health is not provider health.
+- No production domain, Cloudflare resource, secret or route is assumed.
+- Do not modify MCPNEW, HyperFrames, Remotion or Suara repositories without separate approval.
 
 ## Documentation
 
-- [Product requirements](PRD.md)
-- [Phase 1 foundation](docs/PHASE-1-FOUNDATION.md)
-- [Implementation plan](docs/IMPLEMENTATION-PLAN.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Integration matrix](docs/INTEGRATION-MATRIX.md)
-- [API contract status](docs/API-CONTRACT.md)
-- [Security policy](SECURITY.md)
+- PRD.md
+- docs/IMPLEMENTATION-PLAN.md
+- docs/ARCHITECTURE.md
+- docs/API-CONTRACT.md
+- docs/PHASE-1-FOUNDATION.md
+- docs/PHASE-2-CORE-PLATFORM.md
 
 ## License
 
