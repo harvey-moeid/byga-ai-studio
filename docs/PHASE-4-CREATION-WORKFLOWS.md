@@ -16,8 +16,10 @@
 
 ## 4.2 Asset upload and storage
 
-- [ ] R2 bucket/binding and upload contract remain gated; current Studio asset registry is metadata-only.
-- [ ] Implement bounded upload, MIME allowlist, project authorization, R2 object lifecycle and authenticated retrieval after the exact bucket binding is approved.
+- [x] Dedicated APAC R2 bucket `byga-ai-studio-assets` created; Worker binding `R2_ASSETS` added to production config and isolated staging config.
+- [x] Authenticated multipart upload, 25 MiB limit, MIME allowlist, safe names, SHA-256, project-scoped keys, D1 metadata, authenticated download and delete lifecycle implemented.
+- [x] Separate staging Worker and D1 database configured; production deployment and migration remain owner-gated.
+- [ ] Run staging deployment, migration and live upload/download acceptance.
 
 ## 4.3 Job orchestration
 

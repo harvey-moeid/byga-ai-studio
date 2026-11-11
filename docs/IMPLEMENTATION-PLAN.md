@@ -80,7 +80,7 @@ npm ci, secret scanning, lint, typecheck, tests, build and dev proxy smoke are i
 - [x] Video configuration saved as simulation jobs only; no unverified provider dispatch.
 - [x] Suara TTS creation uses the existing server-side, opt-in provider adapter.
 - [x] Existing audio preview/download and job status refresh surfaced from the creation flow.
-- [ ] R2 asset upload/storage and authenticated asset retrieval.
+- [x] Private R2 asset upload/storage and authenticated retrieval implemented; staging rollout pending.
 - [ ] Unified progress/retry orchestration and verified video output management.
 - [ ] Manual accessibility acceptance on desktop and 360px mobile.
 
