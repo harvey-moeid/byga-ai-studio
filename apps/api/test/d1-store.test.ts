@@ -16,10 +16,12 @@ let DatabaseSync:SqliteCtor|null=null;
 try{DatabaseSync=(createRequire(import.meta.url)('node:sqlite') as {DatabaseSync:SqliteCtor}).DatabaseSync;}
 catch(error){if(process.env.CI)throw error;/* local Node without node:sqlite: skip */}
 
-const MIGRATION=readFileSync(new URL('../migrations/0001_init.sql',import.meta.url),'utf8');
+const MIGRATION_1=readFileSync(new URL('../migrations/0001_init.sql',import.meta.url),'utf8');
+const MIGRATION_2=readFileSync(new URL('../migrations/0002_job_provider_id.sql',import.meta.url),'utf8');
 function makeDb(){
   const sqlite=new (DatabaseSync as SqliteCtor)(':memory:');
-  sqlite.exec(MIGRATION);
+  sqlite.exec(MIGRATION_1);
+  sqlite.exec(MIGRATION_2);
   const bound=(sql:string,values:unknown[])=>({
     run:async()=>({success:true,results:[],meta:{changes:Number(sqlite.prepare(sql).run(...values).changes)}}),
     all:async()=>({success:true,results:sqlite.prepare(sql).all(...values),meta:{}}),
@@ -33,7 +35,7 @@ const project=(over:Partial<Project>={}):Project=>({id:'prj_alpha0001',name:'Alp
 const asset=(over:Partial<Asset>={}):Asset=>({id:'ast_asset00001',projectId:'prj_alpha0001',name:'cover.png',mimeType:'image/png',size:1024,type:'image',createdAt:TS,storage:'metadata-only',...over});
 const job=(over:Partial<Job>={}):Job=>({id:'job_job0000001',projectId:'prj_alpha0001',engine:'remotion',operation:'render',state:'queued',createdAt:TS,updatedAt:TS,input:{source:'x',n:1},providerJobId:null,...over});
 
-describe.skipIf(DatabaseSync===null)('D1Store against the real migration',()=>{
+describe.skipIf(DatabaseSync===null)('D1Store against the real migrations',()=>{
   it('creates, lists, renames and archives projects',async()=>{
     const store=new D1Store(makeDb() as never);
     await store.createProject(project());
@@ -60,16 +62,19 @@ describe.skipIf(DatabaseSync===null)('D1Store against the real migration',()=>{
     await store.createProject(project());
     await expect(store.createAsset(asset({size:26214401}))).rejects.toThrow();
   });
-  it('round-trips jobs and applies state changes with compare-and-swap',async()=>{
+  it('round-trips jobs, provider identifiers and compare-and-swap state changes',async()=>{
     const store=new D1Store(makeDb() as never);
     await store.createProject(project());
     await store.createJob(job());
     expect(await store.getJob('job_job0000001')).toEqual(job());
-    const running=job({state:'running',updatedAt:LATER});
+    expect(await store.updateProviderJobId('job_job0000001','remotion_123')).toBe(true);
+    expect(await store.updateProviderJobId('job_missing00001','remotion_456')).toBe(false);
+    expect(await store.getJob('job_job0000001')).toEqual(job({providerJobId:'remotion_123'}));
+    const running=job({state:'running',updatedAt:LATER,providerJobId:'remotion_123'});
     expect(await store.updateJob(running,'queued')).toBe(true);
     expect(await store.updateJob(job({state:'succeeded',updatedAt:LATER}),'queued')).toBe(false);
     expect((await store.getJob('job_job0000001'))?.state).toBe('running');
-    const done=job({state:'succeeded',updatedAt:LATER,output:{kind:'mock',reference:'mock://prj_alpha0001/job_job0000001'}});
+    const done=job({state:'succeeded',updatedAt:LATER,providerJobId:'remotion_123',output:{kind:'mock',reference:'mock://prj_alpha0001/job_job0000001'}});
     expect(await store.updateJob(done,'running')).toBe(true);
     expect(await store.getJob('job_job0000001')).toEqual(done);
     expect(await store.listJobs('prj_alpha0001')).toEqual([done]);

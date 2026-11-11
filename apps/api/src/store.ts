@@ -4,7 +4,6 @@ import type {Bindings} from './env';
 export const LIST_LIMIT=1000;
 export type Counts={projects:number;activeProjects:number;assets:number;jobs:number;runningJobs:number;succeededJobs:number;failedJobs:number};
 
-/** Storage boundary. Two implementations: volatile MemoryStore and durable D1Store. */
 export interface Store{
 readonly kind:'memory'|'d1';
 listProjects():Promise<Project[]>;
@@ -13,13 +12,12 @@ createProject(project:Project):Promise<void>;
 updateProject(project:Project):Promise<void>;
 listAssets(projectId?:string):Promise<Asset[]>;
 createAsset(asset:Asset):Promise<void>;
-/** Resolves true when a row existed and was removed. */
 deleteAsset(id:string):Promise<boolean>;
 listJobs(projectId?:string):Promise<Job[]>;
 getJob(id:string):Promise<Job|null>;
 createJob(job:Job):Promise<void>;
-/** Compare-and-swap on state: resolves false when the stored state is no longer `expected`. */
 updateJob(job:Job,expected:JobState):Promise<boolean>;
+updateProviderJobId(id:string,providerJobId:string):Promise<boolean>;
 counts():Promise<Counts>;
 }
 
@@ -39,17 +37,17 @@ async listJobs(projectId?:string){return [...this.jobs.values()].filter(j=>!proj
 async getJob(id:string){return this.jobs.get(id)??null;}
 async createJob(job:Job){this.jobs.set(job.id,job);}
 async updateJob(job:Job,expected:JobState){const current=this.jobs.get(job.id);if(!current||current.state!==expected)return false;this.jobs.set(job.id,job);return true;}
+async updateProviderJobId(id:string,providerJobId:string){const current=this.jobs.get(id);if(!current)return false;this.jobs.set(id,{...current,providerJobId});return true;}
 async counts():Promise<Counts>{const p=[...this.projects.values()],j=[...this.jobs.values()];return{projects:p.length,activeProjects:p.filter(x=>!x.archived).length,assets:this.assets.size,jobs:j.length,runningJobs:j.filter(x=>x.state==='running'||x.state==='queued').length,succeededJobs:j.filter(x=>x.state==='succeeded').length,failedJobs:j.filter(x=>x.state==='failed').length};}
 }
 
 type ProjectRow={id:string;name:string;archived:number;created_at:string;updated_at:string};
 type AssetRow={id:string;project_id:string;name:string;mime_type:string;size:number;type:string;checksum:string|null;created_at:string};
-type JobRow={id:string;project_id:string;engine:string;operation:string;state:string;input_json:string;output_json:string|null;error:string|null;created_at:string;updated_at:string};
-const PROJECT_COLS='id,name,archived,created_at,updated_at',ASSET_COLS='id,project_id,name,mime_type,size,type,checksum,created_at',JOB_COLS='id,project_id,engine,operation,state,input_json,output_json,error,created_at,updated_at';
-// Rows are re-validated through the shared contracts so a corrupted row fails loudly instead of leaking.
+type JobRow={id:string;project_id:string;engine:string;operation:string;state:string;input_json:string;output_json:string|null;error:string|null;provider_job_id:string|null;created_at:string;updated_at:string};
+const PROJECT_COLS='id,name,archived,created_at,updated_at',ASSET_COLS='id,project_id,name,mime_type,size,type,checksum,created_at',JOB_COLS='id,project_id,engine,operation,state,input_json,output_json,error,provider_job_id,created_at,updated_at';
 const toProject=(r:ProjectRow):Project=>ProjectSchema.parse({id:r.id,name:r.name,archived:r.archived===1,createdAt:r.created_at,updatedAt:r.updated_at});
 const toAsset=(r:AssetRow):Asset=>AssetSchema.parse({id:r.id,projectId:r.project_id,name:r.name,mimeType:r.mime_type,size:r.size,type:r.type,createdAt:r.created_at,storage:'metadata-only',...(r.checksum===null?{}:{checksum:r.checksum})});
-const toJob=(r:JobRow):Job=>JobSchema.parse({id:r.id,projectId:r.project_id,engine:r.engine,operation:r.operation,state:r.state,createdAt:r.created_at,updatedAt:r.updated_at,input:JSON.parse(r.input_json) as unknown,providerJobId:null,...(r.output_json===null?{}:{output:JSON.parse(r.output_json) as unknown}),...(r.error===null?{}:{error:r.error})});
+const toJob=(r:JobRow):Job=>JobSchema.parse({id:r.id,projectId:r.project_id,engine:r.engine,operation:r.operation,state:r.state,createdAt:r.created_at,updatedAt:r.updated_at,input:JSON.parse(r.input_json) as unknown,providerJobId:r.provider_job_id,...(r.output_json===null?{}:{output:JSON.parse(r.output_json) as unknown}),...(r.error===null?{}:{error:r.error})});
 
 export class D1Store implements Store{
 readonly kind='d1' as const;
@@ -64,8 +62,9 @@ async createAsset(a:Asset){await this.db.prepare('INSERT INTO assets (id,project
 async deleteAsset(id:string){const r=await this.db.prepare('DELETE FROM assets WHERE id=?').bind(id).run();return(r.meta.changes??0)>0;}
 async listJobs(projectId?:string){const stmt=projectId?this.db.prepare(`SELECT ${JOB_COLS} FROM jobs WHERE project_id=? ORDER BY created_at DESC LIMIT ${LIST_LIMIT}`).bind(projectId):this.db.prepare(`SELECT ${JOB_COLS} FROM jobs ORDER BY created_at DESC LIMIT ${LIST_LIMIT}`);const{results}=await stmt.all<JobRow>();return results.map(toJob);}
 async getJob(id:string){const row=await this.db.prepare(`SELECT ${JOB_COLS} FROM jobs WHERE id=?`).bind(id).first<JobRow>();return row?toJob(row):null;}
-async createJob(j:Job){await this.db.prepare('INSERT INTO jobs (id,project_id,engine,operation,state,input_json,output_json,error,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)').bind(j.id,j.projectId,j.engine,j.operation,j.state,JSON.stringify(j.input),j.output?JSON.stringify(j.output):null,j.error??null,j.createdAt,j.updatedAt).run();}
+async createJob(j:Job){await this.db.prepare('INSERT INTO jobs (id,project_id,engine,operation,state,input_json,output_json,error,provider_job_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)').bind(j.id,j.projectId,j.engine,j.operation,j.state,JSON.stringify(j.input),j.output?JSON.stringify(j.output):null,j.error??null,j.providerJobId,j.createdAt,j.updatedAt).run();}
 async updateJob(j:Job,expected:JobState){const r=await this.db.prepare('UPDATE jobs SET state=?,output_json=?,error=?,updated_at=? WHERE id=? AND state=?').bind(j.state,j.output?JSON.stringify(j.output):null,j.error??null,j.updatedAt,j.id,expected).run();return(r.meta.changes??0)>0;}
+async updateProviderJobId(id:string,providerJobId:string){const r=await this.db.prepare('UPDATE jobs SET provider_job_id=? WHERE id=?').bind(providerJobId,id).run();return(r.meta.changes??0)>0;}
 async counts():Promise<Counts>{
 const[p,a,j]=await Promise.all([
 this.db.prepare('SELECT COUNT(*) AS total, COALESCE(SUM(CASE WHEN archived=0 THEN 1 ELSE 0 END),0) AS active FROM projects').first<{total:number;active:number}>(),
@@ -75,5 +74,4 @@ return{projects:p?.total??0,activeProjects:p?.active??0,assets:a?.total??0,jobs:
 }
 
 const memory=new MemoryStore();
-/** D1 when the `DB` binding exists, otherwise the volatile in-memory store. */
 export function getStore(env:Bindings|undefined):Store{return env?.DB?new D1Store(env.DB):memory;}

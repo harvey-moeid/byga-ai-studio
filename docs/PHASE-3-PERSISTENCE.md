@@ -1,6 +1,6 @@
 # Phase 3 — Persistence decision (ADR): Cloudflare D1
 
-**Status:** code implemented on `feat/phase-3-d1-persistence`. **Database not provisioned; nothing deployed.** Resolves the "persistence choice" open decision.
+**Status:** Store boundary and initial schema merged in PR #6. Database not provisioned; nothing deployed.
 
 ## Decision
 
@@ -9,47 +9,41 @@ Cloudflare D1 (SQLite) stores projects, asset metadata and jobs. The API talks t
 - `D1Store` — used when the Worker has a `DB` binding.
 - `MemoryStore` — used when there is no `DB` binding (local dev, unit tests, CI). Volatile, as in Phase 2.
 
-`GET /api/v1/health` reports `persistence: "d1" | "memory"` so an operator can see which one is live.
+`GET /api/v1/health` reports `persistence: "d1" | "memory"`.
 
 ## Schema
 
-`apps/api/migrations/0001_init.sql`: `projects`, `assets`, `jobs`, with foreign keys, CHECK constraints (name lengths, asset size ≤ 25 MiB, enum values) and indexes for the list queries. Additive migrations only; never edit an applied one. Job `input`/`output` are stored as JSON text; rows are re-validated through the shared Zod contracts on read.
+- `0001_init.sql`: projects, assets, jobs, foreign keys, CHECK constraints and indexes.
+- `0002_job_provider_id.sql`: additive nullable `jobs.provider_job_id` plus lookup index for engine/provider job reconciliation. Existing rows remain valid.
+
+Additive migrations only; never edit an applied migration. Job input/output are stored as JSON text; rows are re-validated through shared Zod contracts on read.
 
 ## Behaviour notes
 
-- Job advance uses compare-and-swap on `state`; a concurrent change returns `409 JOB_CONFLICT` instead of silently overwriting.
-- List endpoints return at most 1000 rows (both stores). Pagination is not implemented yet.
-- Job `input` is capped at 64 KiB (`400`).
+- Job advance uses compare-and-swap on `state`; a concurrent change returns `409 JOB_CONFLICT`.
+- List endpoints return at most 1000 rows; pagination is not implemented.
+- Job input is capped at 64 KiB.
 - Archiving a project keeps its row; assets and jobs keep their foreign keys.
-- `providerJobId` is not stored yet (always null). The adapter migration will add the column when a real provider needs it.
+- Provider job IDs are nullable until an adapter submits work; the Store can persist the returned ID without overwriting the Studio job state.
 
 ## Not decided / not covered
 
 - Retention, backup and restore policy (D1 Time Travel exists but no policy is set).
 - Real asset bytes (still metadata-only; R2 is a separate decision).
-- Multi-user data separation (there is still a single operator).
-- The web banner still says data is "sementara di memori Worker"; update it when the binding is enabled in production.
+- Multi-user data separation (single operator only).
+- The web banner still says data is temporary in Worker memory; update it when the D1 binding is enabled in production.
 
 ## Provisioning (requires explicit approval; not performed)
 
-These steps change Cloudflare resources. Do not run them without approval.
+1. Create the database: `npx wrangler d1 create byga-ai-studio-db`.
+2. Add the binding to `apps/api/wrangler.jsonc` using the returned ID.
+3. Apply migration: `npx wrangler d1 migrations apply byga-ai-studio-db --remote`.
+4. Local runtime smoke: `npx wrangler d1 migrations apply byga-ai-studio-db --local`, then exercise API against local D1.
 
-1. Create the database: `npx wrangler d1 create byga-ai-studio-db`
-2. Add the binding to `apps/api/wrangler.jsonc` using the returned id:
-
-```jsonc
-"d1_databases": [
-  { "binding": "DB", "database_name": "byga-ai-studio-db", "database_id": "<id from step 1>", "migrations_dir": "migrations" }
-]
-```
-
-3. Apply the migration: `npx wrangler d1 migrations apply byga-ai-studio-db --remote`
-4. Local dev against a local D1: `npx wrangler d1 migrations apply byga-ai-studio-db --local`, then `npm run dev:api`.
-
-The binding is intentionally **not** in `wrangler.jsonc` yet, so CI and `wrangler deploy --dry-run` stay independent of any Cloudflare resource.
+The binding is intentionally absent from `wrangler.jsonc`, so CI and Wrangler dry-run remain independent of Cloudflare resources.
 
 ## Tests
 
-- `apps/api/test/d1-store.test.ts` applies the real migration to SQLite (`node:sqlite`) and exercises `D1Store` plus the HTTP API end to end (CRUD, FK/CHECK enforcement, compare-and-swap, SQL counts). It sits outside `src/` because `apps/api` type-checks with workers-types only. It fails in CI if `node:sqlite` is unavailable and skips locally on Node versions without it.
-- `apps/api/src/app.store.test.ts` covers the memory path (health persistence, input cap).
-- This shim is not a Cloudflare runtime. Run a real `wrangler d1 ... --local` smoke before the first production use.
+- `apps/api/test/d1-store.test.ts` applies migrations 0001 and 0002 to SQLite and exercises D1Store + HTTP API (CRUD, FK/CHECK, compare-and-swap, provider ID round-trip, SQL counts).
+- `apps/api/src/app.store.test.ts` covers the memory path.
+- SQLite shim is not a Cloudflare runtime. Run real Wrangler D1 local smoke before first production use.
