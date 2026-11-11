@@ -1,0 +1,62 @@
+name: Deploy production
+
+# Manual only. Deploys the Studio Worker (API + built web assets) to Cloudflare.
+# Safety rails:
+#   - runs only on refs/heads/main and only when the confirm input is exactly DEPLOY
+#   - uses the `production` environment (configure required reviewers there)
+#   - re-runs the full quality gates before deploying
+#   - refuses to deploy while D1 migrations are pending (apply them with the `D1 migrations` workflow first)
+# Not handled here (owner actions): the STUDIO_ACCESS_TOKEN Worker secret, and any route/custom domain.
+# apps/api/wrangler.jsonc has workers_dev=false and no routes, so a deployed Worker is not publicly
+# reachable until a route or custom domain is added in a separate, explicitly approved change.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type DEPLOY to confirm a production deployment'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy Studio Worker
+    if: github.ref == 'refs/heads/main' && inputs.confirm == 'DEPLOY'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      CI: '1'
+      WRANGLER_SEND_METRICS: 'false'
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Quality gates (lint, typecheck, tests, build)
+        run: npm run check
+      - name: Preflight - no pending D1 migrations
+        working-directory: apps/api
+        run: |
+          set -euo pipefail
+          output="$(npx wrangler d1 migrations list DB --remote 2>&1)"
+          echo "$output"
+          if ! echo "$output" | grep -q 'No migrations to apply'; then
+            echo '::error::D1 has pending (or unreadable) migrations. Run the "D1 migrations" workflow with dry_run=false first.'
+            exit 1
+          fi
+      - name: Deploy Worker
+        working-directory: apps/api
+        run: npx wrangler deploy
