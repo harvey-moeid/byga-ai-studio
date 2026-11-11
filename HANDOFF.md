@@ -2,112 +2,104 @@
 
 **Updated:** 2026-11-11  
 **Repository:** `harvey-moeid/byga-ai-studio`  
-**Default branch:** `main`  
-**Default branch HEAD (observed at session start):** `829c0b6` (merge of PR #8)  
-**Active branch:** `docs/handoff-d1-local-smoke` (docs-only, from `main`)  
-**Open PR:** the PR carrying this file (number in GitHub; docs-only change)  
-**Active phase/subphase:** Phase 3 — engine adapter foundations. Remotion adapter P2 is merged; D1 local runtime smoke is done.  
-**Next immediate task:** manual login/session UX review at desktop and 360px (see section 8).
+**Default branch:** `main`, HEAD at session start of this change: `c9dcd1e` (merge of PR #9)  
+**Active branch:** `feat/d1-binding-and-migration-workflow` (from `main`)  
+**Open PR:** the PR carrying this file (binding + migration workflow + handoff)  
+**Active phase/subphase:** Phase 3 — D1 provisioning is done; binding and manual migration workflow are in review.  
+**Next immediate task:** owner merges the PR, then manually dispatches `D1 migrations` with `dry_run=true`, then `dry_run=false` (section 8).
 
-> On resume, fetch the live `main` tip, open PRs, PR comments/reviews and latest Actions. Live GitHub state is authoritative; this file can go stale (the earlier handoff once misreported PR #7 as open).
+> On resume, fetch live `main`, open PRs, PR comments/reviews and latest Actions. Live GitHub state is authoritative.
 
-## 1. Repository audit snapshot
+## 1. Repository snapshot
 
 - Root: `PRD.md`, `HANDOFF.md`, `README.md`, `SECURITY.md`, `apps/`, `packages/`, `scripts/`, `.github/`, `docs/`.
-- `PRD.md` v1.2.0 mandates one new studio repository, isolated adapters, production-only release, no legacy repo changes, server-side secrets, and explicit approval before production resource changes/deployment.
-- PRs #1–#8 are merged.
-- `apps/api/wrangler.jsonc` has **no** `d1_databases` binding; D1 is not provisioned or bound. Without a binding the API falls back to MemoryStore.
+- Workflows: `.github/workflows/ci.yml` (PR/push/manual) and, added by this change, `.github/workflows/migrate-d1.yml` (manual only).
+- There is **no deploy workflow** in the repo. How/when the Worker is deployed is not defined here; do not assume.
+- PRs #1–#9 merged.
 
 ## 2. Delivery phases
 
 ### Completed / merged
 
-- [x] Phase 0 — discovery, architecture, API contract audit (PR #1).
-- [x] Phase 1 — monorepo foundation and CI baseline (PR #3).
-- [x] Phase 2 — dashboard, project CRUD/archive, asset metadata, mock job lifecycle, engine registry, responsive shell (PR #4).
-- [x] Phase 3: single-operator authentication (PR #5).
-- [x] Phase 3: D1 Store boundary and initial schema (PR #6).
-- [x] Phase 3: Remotion adapter foundation + provider job ID persistence (PR #7).
-- [x] Phase 3: Remotion adapter P2 fix — timeout now covers response-body consumption; regression tests; GET-only bounded retry; submit/cancel single-attempt (PR #8, CI runs #42 and #43 green).
-- [x] Phase 3: **D1 local Wrangler runtime smoke** (this session; see section 4).
+- [x] Phases 0–2 (PRs #1, #3, #4); Phase 3 auth (#5); D1 Store boundary + schema (#6); Remotion adapter foundation (#7); Remotion adapter P2 timeout fix (#8); D1 local Wrangler smoke + handoff (#9).
+- [x] **Production D1 database created** (this session, owner-approved via byga.ai tool): name `byga-ai-studio`, UUID `5b6d6aab-f2f4-4a4d-b6b5-db4b513f6c1e`, location hint APAC, created 2026-11-11T04:40:30Z. At creation it held only Cloudflare's internal `_cf_KV` table; no migration applied.
+
+### In review (this PR)
+
+- [x] `apps/api/wrangler.jsonc`: `d1_databases` binding `DB` → `byga-ai-studio` (UUID above), `migrations_dir: "migrations"`.
+- [x] `.github/workflows/migrate-d1.yml`: `workflow_dispatch` only; `dry_run` input defaults to true; runs only on `refs/heads/main`; uses GitHub Environment `production`; permissions `contents: read`; concurrency group, no cancel-in-progress; steps: checkout, Node 22, `npm ci`, `wrangler d1 migrations list DB --remote`, and (only when `dry_run=false`) `migrations apply DB --remote` then list again. Secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are read from the environment/repo secrets and never echoed.
+- [ ] Merge decision by owner.
 
 ### Remaining Phase 3 work
 
-- [ ] Manual login/session UX review at 360px and desktop (not done; needs a browser).
-- [ ] D1 provisioning, binding and remote migration — requires explicit approval; not done.
-- [ ] Remotion runtime/base URL verification — not done. Live submit/cancel/output is mutating and needs separate explicit approval.
+- [ ] Run the migration workflow (dry run first, then apply) — not run.
+- [ ] Manual login/session UX review at 360px and desktop (needs a browser) — not done.
+- [ ] Remotion runtime/base URL verification — not done; live mutating calls need separate explicit approval.
 - [ ] Remotion route integration only after auth, per-project authorization, quota/concurrency, output-access controls and runtime contract are proven.
-- [ ] HyperFrames adapter only after exact deployed base URL verification and approval for any GitHub/R2 mutations.
-- [ ] MCPNEW MCP/OAuth client onboarding only after explicit OAuth registration and runtime-test approval.
-- [ ] Suara remains blocked until commercially compatible model weights and tokenizer rights are confirmed.
+- [ ] HyperFrames adapter after exact deployed base URL verification and approval for any GitHub/R2 mutations.
+- [ ] MCPNEW MCP/OAuth onboarding after explicit OAuth registration and runtime-test approval.
+- [ ] Suara blocked until commercially compatible model weights and tokenizer rights are confirmed.
 
 ### Later phases
 
 - [ ] Phase 4 — unified creation workflows, secure asset selection/upload, progress and output preview/download.
-- [ ] Phase 5 — security/reliability/accessibility/operations hardening and explicitly approved production launch.
+- [ ] Phase 5 — hardening and explicitly approved production launch.
 
-## 3. Review findings
+## 3. Verification actually performed for this change
 
-- P2 (Codex, PR #7, `discussion_r4533765432`): timeout ended before body parsing. Fixed in PR #8 and merged. Whether the review thread itself was marked resolved on GitHub was not verified (no tool to read review threads).
-- No other known findings.
+In the Claude container, from a clone of `main` with the new `wrangler.jsonc` applied temporarily (reverted, then the same content pushed via GitHub):
 
-## 4. D1 local Wrangler runtime smoke — what was actually run
+- `wrangler d1 migrations list DB --local` and `migrations apply DB --local` with the repo config succeeded for 0001 and 0002 (local emulation only, throwaway state in `/tmp`).
+- `npm run build` (`wrangler deploy --dry-run`) succeeded and listed `env.DB (byga-ai-studio) D1 Database` and `env.ASSETS`. A dry run is not a deployment.
+- `migrate-d1.yml` parsed as valid YAML locally. It has **not** been executed on GitHub.
+- CI results for the PR head must be read from GitHub Actions before merge; this file does not claim them.
 
-Run in the Claude container from a fresh clone of `main` at `829c0b6` (`npm ci`, Node v22.23.4, repo `wrangler` ^4). Nothing was changed in the repository and no Cloudflare resource was touched. Two throwaway configs lived in `/tmp` (not in the repo): a fake local-only D1 binding `DB` with a placeholder all-zero database id and `migrations_dir` pointing at `apps/api/migrations`; state persisted to `/tmp`.
+Not verified:
 
-Results (all observed output, local runtime only):
+- That repo secrets `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` and the `production` environment (with required reviewers) exist. The owner said they were set up; this session had no way to confirm it. If the environment does not exist, GitHub auto-creates it without reviewers — check the protection rules before the first dispatch.
+- That the API token's scope allows `d1 migrations` on this database.
+- Any remote D1 behavior. No migration has been applied remotely.
 
-1. `wrangler d1 migrations apply DB --local` applied `0001_init.sql` and `0002_job_provider_id.sql` successfully, in order.
-2. `wrangler dev --local` served the real worker (`apps/api/src/index.ts`) with the D1 binding. `GET /api/v1/health` returned `persistence: "d1"`.
-3. Through the real routes (bearer auth with a throwaway 40-char token passed via `--var`): created a project, created a remotion job (`providerJobId: null`), advanced it queued→running→succeeded (mock output), a third advance returned `JOB_TERMINAL`, created an asset (metadata-only), dashboard counts matched (1 project / 1 asset / 1 job / 1 succeeded), archived the project.
-4. After the dev server was stopped, `wrangler d1 execute --local` showed the rows persisted (1/1/1, project `archived=1`).
-5. Migration 0002 objects exist: column `jobs.provider_job_id` and index `idx_jobs_provider_job_id`.
-6. A direct insert with an invalid engine was rejected by the `CHECK` constraint.
+## 4. Review findings
 
-Caveats — do not over-claim:
+- P2 (Codex, PR #7) fixed in PR #8 and merged; GitHub thread resolution not verified.
+- No other known findings. Comments on the current PR were not read.
 
-- This is the local Miniflare/workerd D1 emulation, not remote Cloudflare D1. It does not prove remote behavior, limits, latency, or that the remote migration will apply cleanly.
-- Cookie/session login over HTTPS (`__Host-` Secure cookie) was not exercised; only bearer auth was used. CSRF path was not exercised here (covered by unit tests only).
-- `updateProviderJobId` and the Remotion adapter are not reachable from any route, so provider ID persistence was verified only structurally (column/index exist; null round-trips), plus by existing SQLite-shim unit tests.
-- Wrangler printed a harmless warning that `workers.cloudflare.com` could not be resolved (no network for `Request.cf`).
-- Foreign-key enforcement was not specifically tested.
+## 5. Architecture decisions and boundaries
 
-## 5. CI and verification status
-
-- Latest CI observed: run #43 (PR #8 head `8c60b1b`) success; run #41 on `main` after PR #7 success. Per-step logs were not inspected; only run conclusions.
-- A docs-only PR is expected to run CI again; check its result before merging.
-- No deployment was performed. Dry-run build success is not a deployment and not production readiness.
-- Not verified: browser/manual UI review; live Remotion calls; remote D1; the new regression test against the old code.
-
-## 6. Architecture decisions and non-negotiable boundaries
-
-- All new platform code belongs only in `harvey-moeid/byga-ai-studio`.
-- Do not modify legacy repositories: `mcpnew`, `hyperframes`, `remotion`, `suara`; nor their branches, Actions, secrets, databases, buckets, KV namespaces, deployments or domains.
-- No Cloudflare resources, bindings, secrets, database provisioning, remote migrations, workflows or deployments without separate explicit approval. (Adding a `d1_databases` entry to the repo's `wrangler.jsonc` is a binding change; it needs that approval too.)
-- Production-only deployment policy; no preview/staging environment and no release without explicit approval.
-- Keep adapters isolated, independently gated and disabled until contracts and security controls are verified.
+- Migrations are applied to remote D1 **only through the `D1 migrations` GitHub Action**, manually dispatched by the owner (owner decision, 2026-11-11). No ad-hoc remote schema changes through other tools.
+- Additive migrations only; never edit an applied migration; keep 0001 unchanged.
+- Order of operations: apply remote migrations **before** any deploy that includes the `DB` binding. Once deployed with the binding, `getStore` switches from MemoryStore to D1Store; without tables the API would fail.
+- All new platform code only in `harvey-moeid/byga-ai-studio`. Do not modify `mcpnew`, `hyperframes`, `remotion`, `suara` (repos, branches, Actions, secrets, databases, buckets, KV, deployments, domains). Note: an existing account D1 named `mcpnew` is a legacy resource; do not touch it.
+- No new Cloudflare resources, bindings, secrets, workflows dispatches or deployments without explicit owner approval each time.
+- Production-only deployment policy; no preview/staging environment.
+- Adapters stay isolated and default-off until contracts and security controls are verified.
 - Never expose provider secrets or shared passcodes to browser code.
-- Remotion legacy submit has no application auth in inspected source; status/output are public. Studio must enforce operator/project/job authorization and rate limits before routing.
-- Legacy Remotion submit triggers GitHub workflow dispatch and writes legacy KV/R2 state; any live submit/cancel/upload/output needs separate explicit authorization.
-- No provider idempotency key exists. Never automatically replay an ambiguous submit/cancel POST.
-- Additive migrations only; never edit an applied migration. Keep 0001 unchanged.
-- Assets remain metadata-only; job outputs remain mock references until authorized real integration.
-- Single-operator auth is not multi-user isolation.
-- Suara commercial generation remains blocked by licensing review.
+- Remotion legacy submit has no application auth; status/output are public; Studio must enforce authorization and rate limits before routing. Legacy submit triggers GitHub workflow dispatch and writes legacy KV/R2.
+- No provider idempotency key; never auto-replay an ambiguous submit/cancel POST.
+- Assets are metadata-only; job outputs are mock references until authorized real integration.
+- Single-operator auth is not multi-user isolation. Suara stays blocked by licensing.
 - Distinguish source-inspected, fixture-tested, CI-tested, locally-runtime-verified, remote-verified and production-enabled claims.
 
-## 7. Known risks / unresolved items
+## 6. Known risks / unresolved items
 
-- D1 not provisioned or bound; no remote migration applied; local emulation is not remote proof.
-- Remotion runtime URL and live behavior unverified; public submit/status/output routes and non-atomic quota require Studio-side controls.
-- No project/user data separation beyond single operator.
-- Retention, backup/restore, real media storage and upload limits open.
-- HyperFrames deployed base URL unverified; MCPNEW OAuth untested; Suara licensing blocked.
+- Remote D1 is empty until the workflow is run; deploying before that breaks the API.
+- Deployment mechanism is undefined in the repo.
+- Environment protection and secrets unverified (see section 3).
+- Remotion runtime URL and live behavior unverified; public routes and non-atomic quota need Studio-side controls.
+- No project/user data separation beyond a single operator; retention, backup/restore, real media storage and upload limits open.
+- HyperFrames base URL unverified; MCPNEW OAuth untested.
 - Manual accessibility/mobile/desktop acceptance incomplete.
-- Optional doc follow-up: `docs/PHASE-3-REMOTION-FOUNDATION.md` was not re-read this session and may deserve a note that the timeout covers body consumption.
+
+## 7. Not done in this session (explicitly)
+
+No remote migration, no workflow dispatch, no deployment, no secret changes, no live Remotion calls, no change to legacy repositories or other D1 databases.
 
 ## 8. One exact next action
 
-**Manual login/session UX review at desktop and 360px.** It needs a real browser; run `npm run dev` (web) with `npm run dev:api` locally, or have the owner review, and record findings here. Do not claim it done from unit tests or CI.
+1. Owner reviews and merges the PR (CI green on its final head).
+2. In GitHub → Actions → `D1 migrations` → Run workflow on `main` with `dry_run=true`; approve the `production` environment gate; confirm the list shows 0001 and 0002 as pending.
+3. Re-run with `dry_run=false`; confirm both applied, then verify tables exist in the remote D1.
+4. Only then decide on a deployment.
 
-After that, in order: Remotion runtime contract verification (read-only unless separately approved), HyperFrames adapter, MCPNEW OAuth onboarding, Suara only after licensing is resolved. D1 provisioning/binding/remote migration happens only on explicit owner approval.
+After that: manual login review at desktop/360px, Remotion runtime contract verification (read-only unless separately approved), HyperFrames adapter, MCPNEW onboarding, Suara after licensing.
