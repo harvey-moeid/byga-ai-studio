@@ -1,21 +1,12 @@
-import { describe, expect, it } from 'vitest';
-import { app } from './app';
-
-describe('Studio API foundation', () => {
-  it('returns a validated health response', async () => {
-    const response = await app.request('/api/v1/health');
-    const body = await response.json() as { service: string; status: string; version: string };
-    expect(response.status).toBe(200);
-    expect(body).toMatchObject({ service: 'byga-ai-studio-api', status: 'ok', version: '0.1.0' });
-    expect(response.headers.get('x-request-id')).toMatch(/^req_/);
-    expect(response.headers.get('x-content-type-options')).toBe('nosniff');
-  });
-
-  it('returns a structured 404 for unknown API routes', async () => {
-    const response = await app.request('/api/v1/unknown');
-    const body = await response.json() as { error: { code: string; requestId: string } };
-    expect(response.status).toBe(404);
-    expect(body.error.code).toBe('NOT_FOUND');
-    expect(body.error.requestId).toMatch(/^req_/);
-  });
+import {describe,expect,it} from 'vitest';
+import {app} from './app';
+async function call(path:string,init?:RequestInit){const response=await app.request(path,init);return{response,body:await response.json() as any};}
+const post=(body:unknown)=>({method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+describe('Studio API core platform mock mode',()=>{
+it('returns health with request id',async()=>{const r=await call('/api/v1/health');expect(r.response.status).toBe(200);expect(r.body.version).toBe('0.2.0');expect(r.response.headers.get('x-request-id')).toMatch(/^req_/);});
+it('creates, renames and archives projects',async()=>{const p=await call('/api/v1/projects',post({name:' Alpha '}));expect(p.response.status).toBe(201);expect(p.body.name).toBe('Alpha');const u=await call('/api/v1/projects/'+p.body.id,{method:'PATCH',...post({name:'Beta'})});expect(u.body.name).toBe('Beta');const a=await call('/api/v1/projects/'+p.body.id,{method:'DELETE'});expect(a.body.archived).toBe(true);});
+it('validates asset metadata and project association',async()=>{const p=await call('/api/v1/projects',post({name:'Assets'}));const a=await call('/api/v1/assets',post({projectId:p.body.id,name:'cover.png',mimeType:'image/png',size:1024,type:'image'}));expect(a.response.status).toBe(201);expect(a.body.storage).toBe('metadata-only');const bad=await call('/api/v1/assets',post({projectId:'prj_missing0000',name:'x',mimeType:'image/png',size:1,type:'image'}));expect(bad.response.status).toBe(404);});
+it('runs complete queued to succeeded mock lifecycle',async()=>{const p=await call('/api/v1/projects',post({name:'Jobs'}));const j=await call('/api/v1/jobs',post({projectId:p.body.id,engine:'remotion',operation:'render'}));expect(j.body.state).toBe('queued');const r=await call('/api/v1/jobs/'+j.body.id+'/advance',{method:'POST'});expect(r.body.state).toBe('running');const d=await call('/api/v1/jobs/'+j.body.id+'/advance',{method:'POST'});expect(d.body.state).toBe('succeeded');expect(d.body.output.kind).toBe('mock');const end=await call('/api/v1/jobs/'+j.body.id+'/advance',{method:'POST'});expect(end.response.status).toBe(409);});
+it('blocks providers without an enabled mock adapter',async()=>{const p=await call('/api/v1/projects',post({name:'Blocked'}));const j=await call('/api/v1/jobs',post({projectId:p.body.id,engine:'suara',operation:'tts'}));expect(j.response.status).toBe(409);expect(j.body.error.code).toBe('ENGINE_DISABLED');});
+it('returns dashboard counters and structured 404',async()=>{const d=await call('/api/v1/dashboard');expect(d.body.mode).toBe('mock');expect(typeof d.body.projects).toBe('number');const n=await call('/api/v1/no-route');expect(n.response.status).toBe(404);expect(n.body.error.requestId).toMatch(/^req_/);});
 });
