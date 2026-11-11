@@ -15,7 +15,7 @@
 |---|---|---|
 | `main` | `86d93efce6237ee5678ce34b7244b4bdd5d1418d` | Bootstrap; unchanged |
 | `docs/phase-0-foundation` | `5e9ddcb5cd39f6b32782d386429fc482e542ea7d` | Phase 0 audit |
-| `feat/phase-1-foundation` | lockfile/CI commit `58ba31da8a3c80f82e95dd8f8e66fd26a458eb39` (verified); earlier code commit `839adaa`; then this HANDOFF-only refresh | Phase 1 |
+| `feat/phase-1-foundation` | verified head `4f0b4ab917983038156285b23cba80c66ce99e2b` (CI run #21); lockfile/CI commit `58ba31d`; earlier code commit `839adaa`; then this HANDOFF-only refresh | Phase 1 |
 
 Fetch branch HEAD for the exact current SHA; this file cannot contain the SHA of its own commit.
 
@@ -23,7 +23,7 @@ Fetch branch HEAD for the exact current SHA; this file cannot contain the SHA of
 | PR | Branch → base | State | Notes |
 |---|---|---|---|
 | [#1 Phase 0](https://github.com/harvey-moeid/byga-ai-studio/pull/1) | `docs/phase-0-foundation` → `main` | Open | No CI workflow/checks |
-| [#2 Phase 1](https://github.com/harvey-moeid/byga-ai-studio/pull/2) | `feat/phase-1-foundation` → `docs/phase-0-foundation` | Open | Stacked on PR #1; neither merged |
+| [#2 Phase 1](https://github.com/harvey-moeid/byga-ai-studio/pull/2) | `feat/phase-1-foundation` → `docs/phase-0-foundation` | Open | Stacked on PR #1; neither merged. PR description still cites CI run #15 and says the lockfile is a follow-up; refresh it (or rely on this file) before merge review |
 
 Do not merge PR #2 before PR #1. After Phase 0 merges, retarget PR #2 to `main`, inspect its diff and rerun checks.
 
@@ -33,10 +33,11 @@ Workflow: `.github/workflows/ci.yml`
 - Run #17 (success) on code commit `839adaa...`: https://github.com/harvey-moeid/byga-ai-studio/actions/runs/42923308158 — every step succeeded: secret scanning (gitleaks), install, ESLint, typecheck, Vitest, build (Vite + Wrangler dry-run), dev proxy smoke test (Vite -> Wrangler), `npm audit --audit-level=high`.
 - Run #18 (success) on handoff commit `2fa416f...`: https://github.com/harvey-moeid/byga-ai-studio/actions/runs/42924080025
 - Run #19 (success) on handoff commit `97ef3cc`: https://github.com/harvey-moeid/byga-ai-studio/actions/runs/42924265095
+- Run #21 (success) on `4f0b4ab` (handoff + checklist update): https://github.com/harvey-moeid/byga-ai-studio/actions/runs/42925090183
 - Run #20 (success) on `58ba31d` (lockfile + `npm ci`): https://github.com/harvey-moeid/byga-ai-studio/actions/runs/42924941808 — all 8 gates succeeded, with the install step now `npm ci --no-audit --no-fund`.
 - Run #16 (success) covered the earlier handoff-only head `2080c89`.
 
-This HANDOFF-only refresh is after `58ba31d`; check its own Actions run on resume (not verified at time of writing).
+This final HANDOFF-only refresh is after `4f0b4ab`; check its own Actions run on resume (not verified at time of writing).
 
 Local verification (sandbox, Node 22.23, npm 10.9, wrangler 4.160, workerd 2026-11-10; re-run this session from a clean `npm ci` against the committed lockfile): clean install, lint, typecheck, 6 unit tests, build, `npm audit` (0 vulnerabilities) and `npm run smoke:dev` all passed.
 
@@ -125,13 +126,15 @@ Non-negotiable:
 5. gitleaks-action may require a license for organization-owned repos; fine for a personal account. Revisit if the repo moves to an org.
 6. Phase 0 runtime/auth/URL/output/licensing gates remain open.
 7. Authentication, persistence, asset storage, job persistence, adapters and deployment are not implemented by design.
+8. PR #2 description is stale (cites run #15, lockfile "follow-up"). PR #1 is described as draft with no CI because its branch has no workflow.
+9. Session tooling: pushing from the sandbox required adding the repo to the session sources (`add_repo`, push access); a fresh session may need the same. The BYGA connector cannot read or resolve review threads and cannot be relied on to push large files.
 
 ## 6. Single recommended next action
 
 Resolve the Codex P2 thread on PR #2 (`apps/web/src/App.tsx` line 18) on GitHub, or reply with the evidence (smoke:dev in CI runs #17-#20), then give separate approval for the PR sequence: merge PR #1 (Phase 0 -> `main`), retarget PR #2 to `main`, inspect the diff, rerun CI, then merge PR #2. Do not begin Phase 2 before that. Do not deploy.
 
 ## 7. Resume checklist
-- [ ] Re-read this file; verify branch/PR/CI state and head SHAs.
+- [ ] Re-read this file; verify branch/PR/CI state and head SHAs (last verified: head `4f0b4ab`, run #21 green, PR #1/#2 open, `main` unchanged at `86d93ef`).
 - [x] Fix and verify Vite-to-Worker proxy (local smoke + CI runs #17/#18).
 - [x] Add secret scanning (CI runs #17/#18).
 - [x] Update stale Phase 1 acceptance docs.
