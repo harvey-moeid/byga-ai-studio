@@ -6,6 +6,7 @@ import {SESSION_COOKIE,SESSION_TTL_SECONDS,clearFailures,configuredToken,issueSe
 import type {Bindings} from './env';
 import {getStore,type Store} from './store';
 import {SuaraAdapter,SuaraAdapterError,type SuaraMode} from './adapters/suara';
+import {headerFilename,safeFilename} from './filename';
 import {compositionRoutes} from './compositions';
 import {renderRoutes} from './render';
 type Variables={requestId:string};type Env={Variables:Variables;Bindings:Bindings};type AppContext=Context<Env>;
@@ -81,7 +82,6 @@ const ALLOWED_ASSET_TYPES:Record<string,Asset['type']>={
 'video/mp4':'video','video/webm':'video','video/quicktime':'video',
 'application/pdf':'document','text/plain':'document'
 };
-function safeFilename(value:string){const name=value.normalize('NFKC').replace(/[\\/\\\\\\u0000-\\u001f\\u007f]/g,'_').replace(/[^\\p{L}\\p{N}._ -]/gu,'_').trim().slice(0,120);return name&&name!=='.'&&name!=='..'?name:'asset';}
 app.get('/api/v1/assets',async c=>c.json(await getStore(c.env).listAssets(c.req.query('projectId')||undefined)));
 app.post('/api/v1/assets/upload',async c=>{
  const bucket=c.env.R2_ASSETS;if(!bucket)return fail(c,503,'ASSET_STORAGE_NOT_CONFIGURED','Penyimpanan R2 belum terikat pada Worker ini.');
@@ -95,7 +95,7 @@ app.post('/api/v1/assets/upload',async c=>{
  const name=safeFilename(file.name),id=makeId('ast_'),objectKey='projects/'+projectId+'/assets/'+id+'/'+name;
  const bytes=await file.arrayBuffer(),digest=await crypto.subtle.digest('SHA-256',bytes),checksum=[...new Uint8Array(digest)].map(v=>v.toString(16).padStart(2,'0')).join('');
  try{
-  await bucket.put(objectKey,bytes,{httpMetadata:{contentType:mimeType,contentDisposition:'attachment; filename="'+name.replace(/"/g,'')+'"'},customMetadata:{projectId,assetId:id,checksum}});
+  await bucket.put(objectKey,bytes,{httpMetadata:{contentType:mimeType,contentDisposition:'attachment; filename="'+headerFilename(name)+'"'},customMetadata:{projectId,assetId:id,checksum}});
   const item:Asset={id,projectId,name,mimeType,size:file.size,type,checksum,createdAt:now(),storage:'r2',objectKey};
   try{await store.createAsset(item);}catch(error){await bucket.delete(objectKey);throw error;}
   return c.json(item,201);
@@ -106,7 +106,7 @@ app.get('/api/v1/assets/:id/content',async c=>{
  if(asset.storage!=='r2'||!asset.objectKey)return fail(c,404,'ASSET_CONTENT_NOT_FOUND','File fisik tidak tersedia untuk asset ini.');
  const bucket=c.env.R2_ASSETS;if(!bucket)return fail(c,503,'ASSET_STORAGE_NOT_CONFIGURED','Penyimpanan R2 belum terikat pada Worker ini.');
  const object=await bucket.get(asset.objectKey);if(!object)return fail(c,404,'ASSET_CONTENT_NOT_FOUND','File fisik tidak ditemukan di R2.');
- const headers=new Headers();object.writeHttpMetadata(headers);headers.set('content-type',asset.mimeType);headers.set('content-length',String(asset.size));headers.set('content-disposition','attachment; filename="'+asset.name.replace(/["\\r\\n]/g,'_')+'"');headers.set('cache-control','private, no-store');headers.set('x-content-type-options','nosniff');
+ const headers=new Headers();object.writeHttpMetadata(headers);headers.set('content-type',asset.mimeType);headers.set('content-length',String(asset.size));headers.set('content-disposition','attachment; filename="'+headerFilename(asset.name)+'"');headers.set('cache-control','private, no-store');headers.set('x-content-type-options','nosniff');
  return new Response(object.body,{headers});
 });
 app.post('/api/v1/assets',async c=>{const store=getStore(c.env);const p=await readBody(c.req.raw,CreateAssetInputSchema);if(!p.ok)return fail(c,400,'VALIDATION_ERROR','Metadata asset tidak valid atau ukuran melebihi 25 MiB.');if(!await activeProject(store,p.data.projectId))return fail(c,404,'PROJECT_NOT_FOUND','Project aktif tidak ditemukan.');const item:Asset={id:makeId('ast_'),...p.data,createdAt:now(),storage:'metadata-only'};await store.createAsset(item);return c.json(item,201);});
