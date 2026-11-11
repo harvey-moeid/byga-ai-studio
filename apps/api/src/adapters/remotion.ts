@@ -5,7 +5,6 @@ export type AdapterHealth =
   | { status: 'unreachable'; checkedAt: string; reason: string };
 
 export type RemotionJob = {
-  jobId: string;
   template: string;
   ratio: '9:16' | '16:9';
   props?: Record<string, unknown>;

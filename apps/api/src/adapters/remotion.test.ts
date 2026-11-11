@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AdapterDisabledError, RemotionAdapter } from './index';
+import { AdapterDisabledError, RemotionAdapter } from './remotion';
 
 const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
@@ -22,7 +22,7 @@ describe('Remotion adapter foundation', () => {
   it('submits once and returns the provider job id', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(response({ jobId: 'remotion_123' }, 202));
     const adapter = new RemotionAdapter({ enabled: true, baseUrl: 'https://fixture.invalid/', fetcher });
-    await expect(adapter.submitJob({ jobId: 'local_1', template: 'Intro', ratio: '9:16' })).resolves.toEqual({ providerJobId: 'remotion_123' });
+    await expect(adapter.submitJob({ template: 'Intro', ratio: '9:16' })).resolves.toEqual({ providerJobId: 'remotion_123' });
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(fetcher.mock.calls[0]?.[0]).toBe('https://fixture.invalid/api/render');
   });
