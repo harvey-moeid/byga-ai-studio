@@ -31,7 +31,7 @@ Remaining gates: runtime OAuth/MCP handshake; exact HyperFrames base URL; author
 - [x] D1 Store boundary, initial schema and SQLite-backed tests.
 - [ ] D1 database provisioning, binding and remote migration (requires explicit production-resource approval).
 - [ ] Wrangler D1 local-runtime smoke.
-- [x] Remotion isolated client foundation, default-off feature flag, timeout, bounded read retry and fixture tests (pending CI verification in PR).
+- [x] Remotion isolated client foundation, default-off feature flag, timeout, bounded read retry and fixture tests (CI passed in PR #7 run #39; PR remains open with one unresolved P2 timeout/body-consumption review finding).
 - [ ] Manual login review at 360 px and desktop.
 - [ ] Remotion runtime contract and base URL verification (requires authorized, non-mutating test).
 - [ ] HyperFrames adapter foundation after exact deployed URL verification.
