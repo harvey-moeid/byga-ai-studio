@@ -21,7 +21,9 @@
 
 ## Server configuration (not set by this PR)
 
-The deployed Suara Worker is named `omnivoice-studio`; Cloudflare account metadata confirms its `workers.dev` subdomain is enabled. The origin derived from those two verified settings is `https://omnivoice-studio.harveymoeid.workers.dev`. The Worker deployment exists (latest recorded deployment: 2026-11-10), and its settings include `APP_PASSCODE`, D1, and R2 bindings. Secret values are not readable through the account API, and this integration has not tested the protected API endpoint yet.\n\nConfigure the Studio Worker only through the approved Cloudflare secret/variable workflow:
+The deployed Suara Worker is named `omnivoice-studio`; Cloudflare account metadata confirms its `workers.dev` subdomain is enabled. The origin derived from those two verified settings is `https://omnivoice-studio.harveymoeid.workers.dev`. The Worker deployment exists (latest recorded deployment: 2026-11-10), and its settings include `APP_PASSCODE`, D1, and R2 bindings. Secret values are not readable through the account API, and this integration has not tested the protected API endpoint yet.
+
+Configure the Studio Worker only through the approved Cloudflare secret/variable workflow:
 
 | Name | Type | Purpose |
 | --- | --- | --- |
@@ -35,7 +37,8 @@ This PR does not create/update any Cloudflare secret, variable, route, domain or
 
 ## API contract
 
-- `GET /api/v1/engines`: reports whether server-side configuration exists without making a provider request during every dashboard refresh. `configured` means only that the required settings are present.\n- `GET /api/v1/engines/suara/health`: performs an explicit protected Suara `/api/meta` check (passcode + D1 path). It does not prove the CPU runner is online or that a render will succeed.
+- `GET /api/v1/engines`: reports whether server-side configuration exists without making a provider request during every dashboard refresh. `configured` means only that the required settings are present.
+- `GET /api/v1/engines/suara/health`: performs an explicit protected Suara `/api/meta` check (passcode + D1 path). It does not prove the CPU runner is online or that a render will succeed.
 - `POST /api/v1/suara/jobs`: accepts multipart form data, validates text (1,500 chars), mode, language, steps, speed, reference size (10 MiB) and clone consent; persists a Studio job and submits one provider request.
 - `GET /api/v1/jobs` and `GET /api/v1/jobs/:id`: reconcile non-terminal Suara jobs against the provider status.
 - `GET /api/v1/jobs/:id/audio?format=mp3|wav`: requires an authenticated Studio session and a succeeded Suara job, then streams audio from Suara without exposing its passcode.
