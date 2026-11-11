@@ -3,63 +3,58 @@
 **Updated:** 2026-11-11  
 **Repository:** `harvey-moeid/byga-ai-studio`  
 **Default branch:** `main`  
-**Default branch HEAD (verified):** `fb4bb69e199bb5a6a781e51b776f744f7be8f5e7`  
-**Active branch:** `feat/phase-3-remotion-adapter-foundation`  
-**Active branch HEAD before this handoff commit:** `01e537fe21dea7c3f0acb9bf817cd48da64d0c19`  
-**Base SHA for PR #7:** `fb4bb69e199bb5a6a781e51b776f744f7be8f5e7`  
-**Active PR:** [#7 — feat: Phase 3 — Remotion adapter foundation](https://github.com/harvey-moeid/byga-ai-studio/pull/7)  
-**PR state:** OPEN, not merged, mergeable=true, draft=false  
-**Latest verified CI:** run #39, commit `01e537fe21dea7c3f0acb9bf817cd48da64d0c19`, Quality gates SUCCESS  
-**Active phase/subphase:** Phase 3 — engine adapter foundations; subphase 3.x Remotion isolated adapter + provider job ID persistence. Authentication and D1 Store foundation are already merged.  
-**Next immediate task:** fix unresolved P2 review finding: response-body parsing must remain inside the adapter timeout; add regression tests, rerun CI, then request/review PR feedback again.
+**Default branch HEAD (observed):** `610de17` (merge of PR #7; full SHA not recorded — fetch live)  
+**Active branch:** `fix/remotion-adapter-body-timeout` (created from `main`)  
+**Last code commit on active branch:** `bb26437710feeb4005a71b50843a6e8c0ac6aeba`  
+**Active PR:** [#8 — fix: Remotion adapter timeout must cover response body (P2 follow-up to #7)](https://github.com/harvey-moeid/byga-ai-studio/pull/8)  
+**PR state:** OPEN, not merged. Merge requires owner decision.  
+**Latest verified CI:** run #42, commit `bb26437710feeb4005a71b50843a6e8c0ac6aeba`, workflow conclusion SUCCESS (job-level step logs were not inspected in this session). This handoff commit creates a newer head whose CI must be checked again.  
+**Active phase/subphase:** Phase 3 — engine adapter foundations; Remotion adapter P2 follow-up.  
+**Next immediate task:** owner reviews PR #8 (including any new bot/Codex comments) and decides on merge; then D1 local Wrangler runtime smoke.
 
-> On resume, fetch the current branch tip, PR #7 head SHA, PR comments/reviews and latest Actions. The SHA above is the verified head before this handoff update; this handoff update itself creates a new commit. The live GitHub branch tip is authoritative.
+> On resume, fetch the live branch tip, PR #8 head SHA, PR comments/reviews and latest Actions. The live GitHub state is authoritative.
+
+## 0. Correction to the previous handoff
+
+The previous handoff described PR #7 as OPEN with `main` at `fb4bb69`. That was stale: PR #7 was **already merged** into `main` (merge commit `610de17`) before this session, and the P2 review finding was **not** fixed at merge time. `main` therefore contained the unresolved P2 behavior until PR #8. PR #7's description still says CI is pending; it is merged and cannot usefully be edited.
 
 ## 1. Repository audit snapshot
 
-- Repository root contains `PRD.md`, `HANDOFF.md`, `apps/`, `packages/`, `scripts/`, `.github/` and `docs/`.
-- `PRD.md` version 1.2.0 was read. It mandates one new studio repository, isolated adapters, production-only release, no legacy repo changes, server-side secrets, and explicit approval before production resource changes/deployment.
-- All ten files in `docs/` were enumerated and read: `API-CONTRACT.md`, `ARCHITECTURE.md`, `IMPLEMENTATION-PLAN.md`, `INTEGRATION-MATRIX.md`, `PHASE-0-AUDIT.md`, `PHASE-1-FOUNDATION.md`, `PHASE-2-CORE-PLATFORM.md`, `PHASE-3-AUTH.md`, `PHASE-3-PERSISTENCE.md`, `RISK-REGISTER.md`.
-- Seven branches exist: `docs/phase-0-foundation`, `feat/phase-1-foundation`, `feat/phase-2-core-platform`, `feat/phase-3-auth`, `feat/phase-3-d1-persistence`, `feat/phase-3-remotion-adapter-foundation`, `main`.
-- Only one open PR: #7. PRs #1–#6 are closed/merged.
-- `main` remains at `fb4bb69e199bb5a6a781e51b776f744f7be8f5e7` in this audit. PR #7 is not merged.
-- No local checkout was used; repository state was inspected through GitHub. Do not describe local commands as run unless a future session actually runs them.
+- Repository root contains `PRD.md`, `HANDOFF.md`, `README.md`, `SECURITY.md`, `apps/`, `packages/`, `scripts/`, `.github/` and `docs/`.
+- `PRD.md` version 1.2.0 mandates one new studio repository, isolated adapters, production-only release, no legacy repo changes, server-side secrets, and explicit approval before production resource changes/deployment.
+- PRs #1–#7 are merged. PR #8 is the only open PR known to this session.
+- No local checkout was used; all work was done through GitHub. No local commands were run. Test/lint/typecheck/build results below come only from GitHub Actions.
 
 ## 2. Delivery phases
 
 ### Completed / merged
 
 - [x] Phase 0 — discovery, architecture and source-level API contract audit (PR #1).
-- [x] Phase 1 — monorepo foundation, React/Vite web, Hono Worker API, contracts, lint/typecheck/test/build/CI baseline (PR #3).
-- [x] Phase 2 — dashboard, project CRUD/archive, asset metadata, mock job lifecycle, mock engine registry and responsive shell (PR #4).
-- [x] Phase 3 subphase: single-operator authentication (PR #5): `STUDIO_ACCESS_TOKEN`, bearer access, stateless session cookie, CSRF guard and fail-closed configuration.
-- [x] Phase 3 subphase: D1 Store boundary and initial schema (PR #6): MemoryStore/D1Store, additive schema migration 0001 and SQLite-backed test coverage.
+- [x] Phase 1 — monorepo foundation, React/Vite web, Hono Worker API, contracts, CI baseline (PR #3).
+- [x] Phase 2 — dashboard, project CRUD/archive, asset metadata, mock job lifecycle, mock engine registry, responsive shell (PR #4).
+- [x] Phase 3: single-operator authentication (PR #5).
+- [x] Phase 3: D1 Store boundary and initial schema (PR #6).
+- [x] Phase 3: Remotion adapter foundation + provider job ID persistence (PR #7, merged `610de17`): migration `0002_job_provider_id.sql`, contract/Store support, default-off adapter under `apps/api/src/adapters`, no route integration.
 
-### Current subphase — Remotion adapter foundation (PR #7, not merged)
+### Current — P2 follow-up (PR #8, not merged)
 
-- [x] Additive migration `0002_job_provider_id.sql` adds nullable `jobs.provider_job_id` and lookup index; migration 0001 remains unchanged.
-- [x] Shared Job contract permits a non-empty provider job ID or null.
-- [x] Store interface, MemoryStore and D1Store support provider ID persistence.
-- [x] Isolated Remotion adapter client under `apps/api/src/adapters`.
-- [x] Adapter defaults disabled; no API route invokes it.
-- [x] Explicit base URL required; no production URL hard-coded.
-- [x] Timeout configured and bounded to 1–30 seconds (default 8 seconds).
-- [x] Read-only GET retry bounded to at most two retries (default one); submit and cancel are single-attempt.
-- [x] Fixture tests use injected fetch and `.invalid` host; no live provider request.
-- [x] PR #7 CI run #39 passed on the pre-handoff branch head.
-- [ ] Resolve P2 code-review finding about timeout ending before response-body parsing.
-- [ ] Add regression test proving a stalled JSON response body is aborted within configured timeout.
-- [ ] Re-run CI on the fixed PR head and verify all checks.
-- [ ] Obtain/review follow-up PR review and confirm no unresolved findings.
-- [ ] Merge PR #7 only after owner decision/review; do not merge automatically.
+- [x] Inspected adapter on `main`: timer was cleared in `request()` `finally` before `submitJob()`/`getJob()` parsed `response.json()`, confirming the P2 finding.
+- [x] Refactored `request<T>()` to own the whole lifecycle (fetch, error-body read, caller `consume` step). Timer cleared only in `finally` after `return await consume(response)`.
+- [x] Retry: GET only, bounded by `readRetries` (0–2, default 1), only for transient errors (HTTP 5xx, network/abort/parse failures). 4xx, invalid-response and configuration errors are not retried.
+- [x] Submit and cancel remain single-attempt (`retryRead=false`).
+- [x] Regression tests added (fixture-only, fake timers, `.invalid` host): stalled body on submit; stalled body on getJob with `readRetries: 0`; stalled body on getJob retried exactly within bound (2 calls); stalled error-response body; timer count is 0 after success and failure.
+- [x] CI run #42 on `bb26437` concluded success.
+- [ ] Re-check PR #8 review comments (no tool in this session could list PR review comments; not verified).
+- [ ] Confirm the original review thread (`discussion_r4533765432`) is addressed by the owner/reviewer; not verified.
+- [ ] Owner decision to merge PR #8.
 
-### Remaining Phase 3 work after PR #7
+### Remaining Phase 3 work
 
 - [ ] D1 local Wrangler runtime smoke (`wrangler d1 ... --local`); SQLite shim tests do not prove Cloudflare D1 runtime behavior.
 - [ ] Manual login/session UX review at 360px and desktop.
-- [ ] D1 database provisioning, binding and remote migration — requires explicit approval; not done.
-- [ ] Remotion runtime/base URL verification — not done. A live submit/cancel/output operation is mutating and requires separate explicit approval.
-- [ ] Add Remotion route integration only after auth, per-project authorization, quota/concurrency, output-access controls and runtime contract are proven.
+- [ ] D1 provisioning, binding and remote migration — requires explicit approval; not done.
+- [ ] Remotion runtime/base URL verification — not done. Live submit/cancel/output is mutating and requires separate explicit approval.
+- [ ] Remotion route integration only after auth, per-project authorization, quota/concurrency, output-access controls and runtime contract are proven.
 - [ ] HyperFrames adapter only after exact deployed base URL verification and approval for any GitHub/R2 mutations.
 - [ ] MCPNEW MCP/OAuth client onboarding only after explicit OAuth registration and runtime-test approval.
 - [ ] Suara remains blocked until commercially compatible model weights and tokenizer rights are confirmed.
@@ -69,63 +64,35 @@
 - [ ] Phase 4 — unified creation workflows, secure asset selection/upload, progress and output preview/download.
 - [ ] Phase 5 — security/reliability/accessibility/operations hardening and explicitly approved production launch.
 
-## 3. PR #7 exact scope and changed files
+## 3. PR #8 exact scope
 
-The GitHub PR diff was fetched. It reports exactly these ten changed paths:
+Changed in commit `bb26437` (plus this `HANDOFF.md` update):
 
-1. `HANDOFF.md` — session state and safety/next-step notes.
-2. `apps/api/migrations/0002_job_provider_id.sql` — additive provider ID column/index.
-3. `apps/api/src/adapters/remotion.test.ts` — six fixture tests.
-4. `apps/api/src/adapters/remotion.ts` — default-off Remotion adapter client.
-5. `apps/api/src/store.ts` — provider job ID Store operations and mapping.
-6. `apps/api/test/d1-store.test.ts` — SQLite migration/store/API tests, including provider ID round-trip.
-7. `docs/IMPLEMENTATION-PLAN.md` — Phase 3 status and sequencing.
-8. `docs/PHASE-3-PERSISTENCE.md` — migration 0002 and current persistence decision.
-9. `docs/PHASE-3-REMOTION-FOUNDATION.md` — adapter contract, safety boundary and test notes.
-10. `packages/contracts/src/index.ts` — Job.providerJobId schema change.
+1. `apps/api/src/adapters/remotion.ts` — `request<T>()` refactor; `discardBody` and `isRetryableReadError` helpers; `healthCheck`, `submitJob`, `getJob`, `cancelJob` use the new helper. Public API and exports unchanged.
+2. `apps/api/src/adapters/remotion.test.ts` — original six tests preserved; five regression tests added in a nested `describe`.
+3. `HANDOFF.md` — this file.
 
-Temporary `packages/adapters` scaffold files were created during the work and subsequently deleted; they are not present in the final PR diff. Do not recreate them. The chosen final location is `apps/api/src/adapters`, consistent with the current workspace structure.
+No other files changed. No docs under `docs/` were edited; `docs/PHASE-3-REMOTION-FOUNDATION.md` was not re-read this session and may deserve a one-line note about body-inclusive timeout.
 
 ## 4. CI, tests, build, lint and typecheck
 
-Latest verified run at pre-handoff branch head:
-
-- Workflow: CI / `ci.yml`
-- Run: #39 — https://github.com/harvey-moeid/byga-ai-studio/actions/runs/42955828111
-- Commit: `01e537fe21dea7c3f0acb9bf817cd48da64d0c19`
-- Quality gates job: completed / success.
-- Gitleaks secret scan: passed.
-- npm ci: passed.
-- ESLint: passed.
-- TypeScript typecheck: passed.
-- Unit tests: passed.
-- Production build validation: passed (Wrangler dry-run validation only).
-- Vite → Wrangler dev proxy smoke: passed.
-- npm audit --audit-level=high: passed.
-
-Earlier history:
-- Run #36 failed TypeScript because a submit fixture still contained unsupported `jobId`; corrected in subsequent commit.
-- Runs #37, #38 and #39 passed. Run #39 is the latest verified CI before this handoff update.
+- Workflow: CI / `ci.yml`.
+- Run #42 — https://github.com/harvey-moeid/byga-ai-studio/actions/runs/42959534216 — commit `bb26437710feeb4005a71b50843a6e8c0ac6aeba` — conclusion **success**.
+- Run #41 on `main` completed success (post-merge of PR #7); run #40 on the old feature branch completed success.
+- The pipeline (per earlier handoff) runs gitleaks, npm ci, ESLint, typecheck, unit tests, Wrangler dry-run build validation, dev proxy smoke and `npm audit --audit-level=high`. This session confirmed only the overall run conclusion, not each step's log.
+- Not verifiable here: the new regression test was never executed against the old implementation, so it is reasoned (not demonstrated) to fail on the pre-fix code.
 - No deployment was performed. A successful build/dry-run is not a deployment and is not production readiness.
 
 Not run / not verified:
 - No local D1 Wrangler runtime smoke.
 - No browser/manual visual review.
 - No live Remotion health check, submit, cancel, status, upload or output retrieval.
-- No Cloudflare D1 provisioning, remote migration, binding, secret, workflow or deployment change.
+- No Cloudflare D1 provisioning, remote migration, binding, secret, workflow dispatch or deployment change.
 
-## 5. Open PR review finding — must resolve before merge
+## 5. Review findings
 
-GitHub PR #7 review comment from Codex identified a P2 issue at `apps/api/src/adapters/remotion.ts`:
-
-**Finding:** the request timeout currently ends once `fetch()` returns response headers. `request()` clears its AbortController timer in `finally`, but `submitJob()` and `getJob()` parse `response.json()` after `request()` returns. A provider that sends headers and then stalls while streaming the JSON body can therefore exceed `timeoutMs`.
-
-- Review comment: https://github.com/harvey-moeid/byga-ai-studio/pull/7#discussion_r4533765432
-- Review was against commit `b9ccb128661804d2c1e5ec5e2187f3c43a1a2a6e`.
-- The current adapter source still has the same timeout/body-consumption structure at the time of this audit.
-- Treat this finding as unresolved. Do not claim PR review clean or ready to merge.
-
-**Recommended fix:** keep the AbortController timer alive through response-body consumption. Refactor the adapter request helper to own the full request-and-parse lifecycle (or otherwise expose a safe response consumer that runs before the timer is cleared). Ensure timer cleanup in a single `finally` after body parsing. Preserve single-attempt semantics for POST submit/cancel and bounded retries only for GET. Add a deterministic fixture test using a delayed/stalled response body and assert timeout aborts it. Also cover both submit and getJob parsing paths as appropriate.
+- **P2 (Codex, PR #7, `discussion_r4533765432`)**: timeout ended before response-body parsing. Fix and tests are in PR #8 with green CI; the finding should be treated as *fixed pending review confirmation*, not as closed.
+- No other findings known. PR #8 comments were not read (tool unavailable).
 
 ## 6. Architecture decisions and non-negotiable boundaries
 
@@ -137,39 +104,28 @@ GitHub PR #7 review comment from Codex identified a P2 issue at `apps/api/src/ad
 - Keep all adapters isolated, independently gated and disabled until contracts and security controls are verified.
 - Never expose provider secrets or shared passcodes to browser code.
 - The Remotion legacy submit endpoint has no application auth in the inspected source; status/output endpoints are public. Studio must enforce operator and project/job authorization and rate limits before routing any requests.
-- Legacy Remotion submit triggers GitHub workflow dispatch and writes legacy KV/R2 state. Any live submit/cancel/upload/output operation is outside this handoff's authorization.
-- No common provider idempotency key exists. Never automatically replay an ambiguous submit/cancel POST.
+- Legacy Remotion submit triggers GitHub workflow dispatch and writes legacy KV/R2 state. Any live submit/cancel/upload/output operation needs separate explicit authorization.
+- No provider idempotency key exists. Never automatically replay an ambiguous submit/cancel POST.
 - Migration policy: additive migrations only; never edit an applied migration. Keep migration 0001 unchanged.
-- Assets remain metadata-only; no real binary upload is implemented. Current job outputs remain mock references until authorized real integration.
+- Assets remain metadata-only; job outputs remain mock references until authorized real integration.
 - Single-operator auth is not multi-user/role-based isolation.
-- Suara commercial generation remains blocked by licensing review; do not enable it based on code availability alone.
+- Suara commercial generation remains blocked by licensing review.
 - Distinguish source-inspected, fixture-tested, CI-tested, runtime-verified and production-enabled claims.
 
 ## 7. Known risks / unresolved items
 
-- **P2 open:** Remotion response-body parsing is outside the timeout window (see review finding above).
-- Remotion runtime URL and live behavior have not been independently verified; source config alone is not runtime proof.
+- PR #8 awaits review/merge; until merged, `main` still has the P2 timeout behavior.
+- Remotion runtime URL and live behavior are unverified; source config alone is not runtime proof.
 - Remotion public submit/status/output routes and non-atomic quota require Studio-side auth, authorization, rate limiting and concurrency controls.
-- D1 has not been provisioned or bound; no remote migration applied.
-- D1 SQLite shim tests are not equivalent to Cloudflare D1 runtime testing.
+- D1 not provisioned or bound; no remote migration applied; SQLite shim tests are not equivalent to Cloudflare D1 runtime tests.
 - No project/user data separation beyond single operator.
 - Retention, backup/restore, real media storage and upload limits remain open.
-- HyperFrames deployed base URL remains unverified.
-- MCPNEW OAuth registration/handshake/tool authorization remains untested.
-- Suara model/tokenizer licensing remains blocked.
-- Manual accessibility/mobile/desktop acceptance remains incomplete.
-- PR description still says CI is pending; actual GitHub Actions run #39 is green. If PR editing is available later, update the description to avoid this stale statement.
+- HyperFrames deployed base URL unverified; MCPNEW OAuth registration/handshake untested; Suara licensing blocked.
+- Manual accessibility/mobile/desktop acceptance incomplete.
+- Stale-handoff risk: the previous handoff misreported PR #7 as open. Always verify PR state from GitHub before acting.
 
 ## 8. One exact next action
 
-**Fix the P2 Remotion timeout/body-consumption issue on `feat/phase-3-remotion-adapter-foundation`.**
+**Owner reviews PR #8 and decides whether to merge it** (squash/merge only after the CI run for the final head, which includes this handoff commit, is green and review comments are clean).
 
-Acceptance criteria:
-1. Abort timeout remains active until JSON body parsing completes.
-2. Add a deterministic test where response headers arrive but body stalls; request rejects/aborts within the configured timeout.
-3. Keep GET retry bounded and keep submit/cancel single-attempt.
-4. Run and pass the full CI workflow on the new PR head.
-5. Re-check PR #7 review comments and mark the P2 addressed only after code and test evidence exist.
-6. Keep PR #7 open until review is clean and the owner chooses to merge.
-
-Do not start HyperFrames, MCPNEW, D1 provisioning or live Remotion tests before this is resolved.
+After merge, in order: (1) D1 local Wrangler runtime smoke, (2) manual login review at desktop and 360px, (3) Remotion runtime contract verification (read-only unless separately approved), (4) HyperFrames adapter, (5) MCPNEW OAuth onboarding, (6) Suara only after licensing is resolved.

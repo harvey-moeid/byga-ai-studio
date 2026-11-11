@@ -1,9 +1,31 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AdapterDisabledError, RemotionAdapter } from './remotion';
 
 const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
+/**
+ * Mimics real fetch: headers resolve immediately, the body starts streaming and then stalls forever.
+ * The body stream errors only when the request's AbortSignal fires, as a real network body would.
+ */
+const stalledBodyResponse = (init: RequestInit | undefined, status = 200) => {
+  const signal = init?.signal;
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode('{"jobId":'));
+      signal?.addEventListener('abort', () => controller.error(new DOMException('The operation was aborted.', 'AbortError')), { once: true });
+    }
+  });
+  return new Response(body, { status, headers: { 'content-type': 'application/json' } });
+};
+
+const stalledBodyFetcher = (status = 200) =>
+  vi.fn<typeof fetch>().mockImplementation(async (_input, init) => stalledBodyResponse(init, status));
+
 describe('Remotion adapter foundation', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('is disabled by default and performs no network request', async () => {
     const fetcher = vi.fn<typeof fetch>();
     const adapter = new RemotionAdapter({ fetcher });
@@ -55,5 +77,68 @@ describe('Remotion adapter foundation', () => {
     const adapter = new RemotionAdapter({ enabled: true, baseUrl: 'https://fixture.invalid', fetcher, readRetries: 2 });
     await expect(adapter.cancelJob('remotion_123')).rejects.toMatchObject({ status: 503 });
     expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  describe('response body timeout (P2 regression)', () => {
+    it('aborts a submit whose response body stalls after headers, without retrying', async () => {
+      vi.useFakeTimers();
+      const fetcher = stalledBodyFetcher(202);
+      const adapter = new RemotionAdapter({ enabled: true, baseUrl: 'https://fixture.invalid', fetcher, timeoutMs: 1000, readRetries: 2 });
+      const outcome = expect(adapter.submitJob({ template: 'Intro', ratio: '9:16' })).rejects.toMatchObject({ name: 'AbortError' });
+      await vi.advanceTimersByTimeAsync(1000);
+      await outcome;
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('aborts a getJob whose response body stalls and does not retry when readRetries is 0', async () => {
+      vi.useFakeTimers();
+      const fetcher = stalledBodyFetcher();
+      const adapter = new RemotionAdapter({ enabled: true, baseUrl: 'https://fixture.invalid', fetcher, timeoutMs: 1000, readRetries: 0 });
+      const outcome = expect(adapter.getJob('remotion_123')).rejects.toMatchObject({ name: 'AbortError' });
+      await vi.advanceTimersByTimeAsync(1000);
+      await outcome;
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('retries a stalled getJob body only within the configured bound', async () => {
+      vi.useFakeTimers();
+      const fetcher = stalledBodyFetcher();
+      const adapter = new RemotionAdapter({ enabled: true, baseUrl: 'https://fixture.invalid', fetcher, timeoutMs: 1000, readRetries: 1 });
+      const outcome = expect(adapter.getJob('remotion_123')).rejects.toMatchObject({ name: 'AbortError' });
+      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(1000);
+      await outcome;
+      expect(fetcher).toHaveBeenCalledTimes(2);
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('keeps the timeout active while reading the body of an error response', async () => {
+      vi.useFakeTimers();
+      const fetcher = stalledBodyFetcher(503);
+      const adapter = new RemotionAdapter({ enabled: true, baseUrl: 'https://fixture.invalid', fetcher, timeoutMs: 1000, readRetries: 2 });
+      const outcome = expect(adapter.submitJob({ template: 'Intro', ratio: '9:16' })).rejects.toMatchObject({ status: 503 });
+      await vi.advanceTimersByTimeAsync(1000);
+      await outcome;
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('clears the timer after successful submit, getJob and cancel', async () => {
+      vi.useFakeTimers();
+      const fetcher = vi.fn<typeof fetch>()
+        .mockImplementationOnce(async () => response({ jobId: 'remotion_123' }, 202))
+        .mockImplementationOnce(async () => response({ jobId: 'remotion_123', status: 'rendering' }))
+        .mockImplementationOnce(async () => response({ ok: true }));
+      const adapter = new RemotionAdapter({ enabled: true, baseUrl: 'https://fixture.invalid', fetcher });
+      await adapter.submitJob({ template: 'Intro', ratio: '9:16' });
+      expect(vi.getTimerCount()).toBe(0);
+      await adapter.getJob('remotion_123');
+      expect(vi.getTimerCount()).toBe(0);
+      await adapter.cancelJob('remotion_123');
+      expect(vi.getTimerCount()).toBe(0);
+      expect(fetcher).toHaveBeenCalledTimes(3);
+    });
   });
 });
