@@ -1,9 +1,8 @@
 // Single-operator authentication primitives (Web Crypto only; runs on Workers and Node).
 // Credential: one server-side secret (STUDIO_ACCESS_TOKEN). No user model, no persistence.
+import type { Bindings } from './env';
 
 const encoder = new TextEncoder();
-
-export type Bindings = { STUDIO_ACCESS_TOKEN?: string };
 
 export const SESSION_COOKIE = '__Host-byga_session';
 export const SESSION_TTL_SECONDS = 8 * 60 * 60;
