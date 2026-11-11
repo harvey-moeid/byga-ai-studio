@@ -14,7 +14,8 @@ describe('Suara API integration',()=>{
     const fetcher=vi.fn<typeof fetch>()
       .mockResolvedValueOnce(new Response(JSON.stringify({job_id:providerId}),{status:201,headers:{'content-type':'application/json'}}))
       .mockResolvedValueOnce(new Response(JSON.stringify({id:providerId,status:'done',mode:'auto',progress:{done:1,total:1},audioSec:3.5}),{status:200,headers:{'content-type':'application/json'}}))
-      .mockResolvedValueOnce(new Response(new Uint8Array([1,2,3]),{status:200}));
+      .mockResolvedValueOnce(new Response(new Uint8Array([1,2,3]),{status:200}))
+      .mockResolvedValueOnce(new Response(new Uint8Array([4,5,6]),{status:200}));
     vi.stubGlobal('fetch',fetcher);
     const projectRes=await send('/api/v1/projects',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:'Suara integration test'})});
     expect(projectRes.status).toBe(201);
@@ -37,7 +38,11 @@ describe('Suara API integration',()=>{
     expect(audio.status).toBe(200);
     expect(audio.headers.get('content-type')).toBe('audio/mpeg');
     expect(new Uint8Array(await audio.arrayBuffer())).toEqual(new Uint8Array([1,2,3]));
-    expect(fetcher).toHaveBeenCalledTimes(3);
+    const wav=await send('/api/v1/jobs/'+job.id+'/audio?format=wav');
+    expect(wav.headers.get('content-type')).toBe('audio/wav');
+    expect(wav.headers.get('content-disposition')).toContain('.wav');
+    expect(new Uint8Array(await wav.arrayBuffer())).toEqual(new Uint8Array([4,5,6]));
+    expect(fetcher).toHaveBeenCalledTimes(4);
     expect(new Headers(fetcher.mock.calls[0]?.[1]?.headers).get('x-passcode')).toBe('server-only-passcode');
   });
 
