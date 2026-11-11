@@ -29,7 +29,7 @@ npm ci, secret scanning, lint, typecheck, tests, build and dev proxy smoke are i
 
 ## Phase 3 — Authentication, persistence and engine adapter foundations
 
-**Status:** in progress. PRs #5–#11 are merged; remote production migrations and runtime/UX gates remain open.
+**Status:** in progress. PRs #5–#11 are merged; remote production migrations are applied and verified; runtime/UX and deployment prerequisites remain open.
 
 ### 3.1 Authentication
 
@@ -46,8 +46,8 @@ npm ci, secret scanning, lint, typecheck, tests, build and dev proxy smoke are i
 - [x] Production D1 database created and binding added (PR #10).
 - [x] Manual remote migration workflow added (PR #10).
 - [x] Local Wrangler D1 migration smoke and local build validation recorded.
-- [ ] Apply remote production migrations with explicit owner approval.
-- [ ] Verify remote `d1_migrations` and application tables. Workflow run #1 was dry-run only; it did not apply migrations.
+- [x] Apply remote production migrations with explicit owner approval (workflow run #2, `42962819170`).
+- [x] Verify remote `d1_migrations` and application tables independently; both migrations and expected app tables/indexes are present.
 
 ### 3.3 Remotion adapter foundation
 
@@ -68,7 +68,7 @@ npm ci, secret scanning, lint, typecheck, tests, build and dev proxy smoke are i
 - [x] Full quality gates and remote D1 migration preflight in deploy workflow.
 - [ ] Verify GitHub `production` Environment reviewers and Cloudflare secret scopes.
 - [ ] Configure Worker secret `STUDIO_ACCESS_TOKEN`.
-- [ ] Approve and complete remote migrations before deployment.
+- [x] Approve and complete remote migrations before deployment (completed 2026-11-11).
 - [ ] Approve production deployment separately.
 - [ ] Approve route/custom domain configuration separately; `workers_dev=false` and no route is currently declared.
 

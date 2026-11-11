@@ -1,14 +1,14 @@
 # BYGA AI Studio — Session Handoff
 
-**Updated:** 2026-11-11 11:54 WIB
+**Updated:** 2026-11-11 12:01 WIB
 **Repository:** `harvey-moeid/byga-ai-studio`
 **Default branch:** `main`
 **Main HEAD at handoff:** `fec2fb1f91a54430a278336ddf3c3d975501e575`
 **Documentation branch:** `docs/phase-3-production-handoff` (created from the main HEAD above)
-**Open PRs at inspection:** none
-**Active phase/subphase:** Phase 3 — Authentication, D1 persistence and engine adapter foundations. Production D1 binding and manual workflows are merged; remote migrations are STILL PENDING.
+**Open PRs at inspection:** PR #12 (documentation refresh)
+**Active phase/subphase:** Phase 3 — Authentication, D1 persistence and engine adapter foundations. Production D1 binding and manual workflows are merged; migrations 0001 and 0002 are APPLIED and independently verified remotely.
 **Production deployment:** NOT performed.
-**Next immediate task:** owner must explicitly authorize running `D1 migrations` with `dry_run=false` after confirming GitHub Environment protection and Cloudflare token scope. Then verify remote schema. Do not deploy until migrations are applied and the deployment prerequisites are explicitly approved.
+**Next immediate task:** complete Phase 3 auth secret and UX/runtime verification. Production deployment remains separate and is NOT authorized.
 
 > On resume, fetch live GitHub state first. This document is a snapshot, not authority over newer repository state.
 
@@ -17,11 +17,11 @@
 - Main HEAD: `fec2fb1f91a54430a278336ddf3c3d975501e575` (merge PR #11).
 - PR #10 merged: production D1 binding and manual migration workflow.
 - PR #11 merged: manual production deploy workflow with D1 migration preflight.
-- Open PRs: 0 at inspection.
+- PR #12: open; docs branch `docs/phase-3-production-handoff`.
 - Latest observed CI run: #50, completed/success on `main`, URL: https://github.com/harvey-moeid/byga-ai-studio/actions/runs/42961591548
-- D1 migration workflow run #1: completed/success, run ID `42961706228`, but it was a DRY RUN. The job name was “List pending D1 migrations”; “Apply migrations (remote)” and “List migrations after apply (remote)” were skipped. A green workflow result does NOT mean migrations were applied.
+- D1 migration workflow run #1 (ID `42961706228`) was a dry-run only. Run #2 (ID `42962819170`) completed/success with all steps, including “Apply migrations (remote)” and post-apply listing, successful.
 - Production D1 database: `byga-ai-studio`, UUID `5b6d6aab-f2f4-4a4d-b6b5-db4b513f6c1e`.
-- Direct read-only D1 inspection found only Cloudflare internal `_cf_KV`, `d1_migrations`, and `sqlite_sequence`; `d1_migrations` contained no rows. Application tables `projects`, `assets`, and `jobs` were absent. Remote migration state is therefore NOT applied.
+- Independent read-only remote verification after run #2: `d1_migrations` records `0001_init.sql` and `0002_job_provider_id.sql`, both applied at `2026-11-11 05:00:25`; application tables `projects`, `assets`, and `jobs` and their expected indexes exist.
 - Migration files present: `apps/api/migrations/0001_init.sql` and `0002_job_provider_id.sql`.
 - Workflow files: `.github/workflows/ci.yml`, `.github/workflows/migrate-d1.yml`, `.github/workflows/deploy-production.yml`.
 
@@ -46,8 +46,8 @@
 - [x] D1 binding configured in `apps/api/wrangler.jsonc`: binding `DB`, database `byga-ai-studio`, UUID above, migrations directory `migrations`.
 - [x] Local migration smoke for 0001 and 0002 recorded in earlier handoff; local emulation only.
 - [x] Manual D1 migration workflow exists and completed a successful dry-run/list operation.
-- [ ] Apply migrations to remote production D1. This is a production database mutation and requires explicit owner authorization for the apply run.
-- [ ] Verify remote `d1_migrations` contains both migration versions and application tables exist.
+- [x] Apply migrations to remote production D1 after explicit owner authorization (workflow run #2).
+- [x] Verify remote `d1_migrations` contains both migration versions and application tables/indexes exist via independent read-only SQL queries.
 - [ ] Verify GitHub `production` Environment required reviewers and secrets `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`; confirm token D1 permissions. Their existence/scope has not been independently verified.
 - [ ] Set Worker secret `STUDIO_ACCESS_TOKEN` through an approved secret-management action; without it authentication fails closed with `AUTH_NOT_CONFIGURED`. Never put its value in Git or logs.
 - [ ] Manual login/session UX review at 360px and desktop.
@@ -73,8 +73,8 @@ PR/push/manual quality gates: gitleaks, Node 22, `npm ci`, lint, typecheck, unit
 - `dry_run` defaults to true.
 - With `dry_run=true`, only lists pending remote migrations; it does not apply them.
 - With `dry_run=false`, applies migrations remotely and lists the result.
-- Observed run #1 used the default dry-run behavior; apply steps were skipped.
-- Next mutation must be owner-approved. Check environment protection and token permissions before dispatch.
+- Run #2 (`42962819170`) was explicitly dispatched with `dry_run=false`; the apply and post-apply listing steps completed successfully.
+- Remote SQL verification confirms migration history and app schema. The workflow's success and independent schema inspection both passed.
 
 ### Deploy production — `.github/workflows/deploy-production.yml`
 
@@ -101,9 +101,10 @@ PR/push/manual quality gates: gitleaks, Node 22, `npm ci`, lint, typecheck, unit
 
 ## 5. Verification record
 
-- Main CI run #50: completed/success. This confirms the configured CI workflow passed for that run, not manual UX or provider runtime readiness.
-- D1 workflow run #1: completed/success, but dry-run only; apply steps skipped.
-- Direct remote D1 read-only query: `d1_migrations` empty; app tables absent.
+- Main CI run #50: completed/success. This confirms configured CI passed for that run, not manual UX or provider runtime readiness.
+- PR #12 CI run #51: completed/success, 11/11 quality-gate steps successful.
+- D1 workflow run #2 (`42962819170`): completed/success; list, apply and post-apply list steps all successful.
+- Independent read-only remote SQL: migration rows for `0001_init.sql` and `0002_job_provider_id.sql`; tables `projects`, `assets`, `jobs` and expected indexes exist.
 - Local migration smoke and Wrangler dry-run were previously reported in the PR #10 handoff; they do not prove remote migration.
 - Production deploy: not run.
 - No live provider submit, OAuth registration, asset upload, cancellation or legacy repository mutation was performed in this continuation.
@@ -112,13 +113,12 @@ PR/push/manual quality gates: gitleaks, Node 22, `npm ci`, lint, typecheck, unit
 
 1. Review this documentation PR and merge it after CI is green.
 2. Owner verifies GitHub `production` Environment required reviewers and Cloudflare API token scopes.
-3. Owner explicitly authorizes a manual `D1 migrations` workflow run on `main` with `dry_run=false`.
-4. Verify remote migration list shows 0001 and 0002 applied; independently query `sqlite_master` and `d1_migrations`.
-5. Configure `STUDIO_ACCESS_TOKEN` as a Worker secret using an approved secure path; do not send the secret in chat.
-6. Complete manual login review at 360px and desktop.
-7. Verify Remotion/HyperFrames/MCPNEW contracts one at a time with explicit approval for any operation that can mutate legacy systems.
-8. Only after the above, decide separately whether to authorize a production deployment and route/domain configuration.
+3. Configure `STUDIO_ACCESS_TOKEN` as a Worker secret using an approved secure path; do not send the secret in chat.
+4. Complete manual login/session review at 360px and desktop.
+5. Verify Remotion/HyperFrames/MCPNEW contracts one at a time with explicit approval for any operation that can mutate legacy systems.
+6. Complete Phase 3 runtime and persistence integration tests.
+7. Decide separately whether to authorize production deployment and route/domain configuration.
 
 ## 7. Session continuation instruction
 
-On the next session, start by fetching live `main`, open PRs, latest CI, D1 migration workflow runs and read-only production D1 schema. Do not infer remote migration success from a green dry-run workflow. Continue from the first unchecked Phase 3 item.
+On the next session, start by fetching live `main`, open PRs, latest CI, D1 migration workflow runs and read-only production D1 schema. Remote D1 migrations are now applied and independently verified. Continue from the first unchecked Phase 3 item; do not deploy without separate explicit approval.

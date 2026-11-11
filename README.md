@@ -2,7 +2,7 @@
 
 Unified workspace for AI-assisted audio and video production.
 
-> **Current status:** Phase 3 — authentication, D1 persistence and adapter foundations. Production D1 binding and manual migration/deploy workflows are merged. Remote production migrations are still pending.
+> **Current status:** Phase 3 — authentication, D1 persistence and adapter foundations. Production D1 binding and manual migration/deploy workflows are merged. Remote production migrations 0001 and 0002 have been applied and independently verified.
 > **Deployment:** production only; no preview/staging. Production migration and release require explicit owner approval.
 
 ## Product direction
@@ -25,9 +25,9 @@ React, TypeScript, Vite, Hono on Cloudflare Workers, Zod, npm workspaces, Vitest
 ## Current production readiness
 
 - Production D1 database and `DB` binding exist.
-- Migrations `0001_init.sql` and `0002_job_provider_id.sql` have **not** been confirmed applied remotely.
-- The observed D1 workflow run #1 was a successful dry run only; apply steps were skipped.
-- Do not deploy until remote migrations are applied and verified.
+- Migrations `0001_init.sql` and `0002_job_provider_id.sql` were applied by workflow run #2 (`42962819170`), which completed successfully.
+- Independent read-only SQL confirmed both rows in `d1_migrations` and the `projects`, `assets`, and `jobs` application tables.
+- Do not deploy until remaining auth secret, UX, runtime, route/domain and explicit release approval gates are satisfied.
 - `STUDIO_ACCESS_TOKEN` Worker secret, production route/custom domain and manual UX acceptance are separate outstanding prerequisites.
 - No provider adapter is enabled for real external operations.
 
