@@ -67,8 +67,16 @@ routes.post('/compositions/:id/versions',async c=>{
  const row=await db.prepare('SELECT id,project_id,engine,name,current_version,archived,created_at,updated_at FROM compositions WHERE id=? AND archived=0').bind(id).first<CompositionRow>();if(!row)return c.json(jsonError('Komposisi tidak ditemukan.','COMPOSITION_NOT_FOUND'),404);
  const source=typeof body.source==='string'?body.source:'',issue=sourceRules(row.engine,source);if(issue)return c.json(jsonError(issue,'SOURCE_INVALID'),400);
  const version=row.current_version+1,ext=row.engine==='hyperframes'?'html':'tsx',key='compositions/'+row.project_id+'/'+id+'/v'+version+'.'+ext,sha=await digest(source),bytes=new TextEncoder().encode(source),created=now(),versionId=makeId('cv_');
- try{await bucket.put(key,bytes,{httpMetadata:{contentType:row.engine==='hyperframes'?'text/html; charset=utf-8':'text/plain; charset=utf-8'},customMetadata:{projectId:row.project_id,compositionId:id,version:String(version),sha256:sha}});const update=await db.prepare('UPDATE compositions SET current_version=?,updated_at=? WHERE id=? AND current_version=? AND archived=0').bind(version,created,id,row.current_version).run();if((update.meta.changes??0)===0){await bucket.delete(key);return c.json(jsonError('Versi berubah di sesi lain. Muat ulang sebelum menyimpan.','VERSION_CONFLICT'),409);}await db.prepare('INSERT INTO composition_versions (id,composition_id,version,r2_key,size,sha256,note,created_at) VALUES (?,?,?,?,?,?,?,?)').bind(versionId,id,version,key,bytes.byteLength,sha,typeof body.note==='string'?body.note.slice(0,500):null,created).run();}
- catch{return c.json(jsonError('Versi baru gagal disimpan. Periksa status sebelum mencoba ulang.','VERSION_SAVE_FAILED'),503);}
+ try{
+  await bucket.put(key,bytes,{httpMetadata:{contentType:row.engine==='hyperframes'?'text/html; charset=utf-8':'text/plain; charset=utf-8'},customMetadata:{projectId:row.project_id,compositionId:id,version:String(version),sha256:sha}});
+  await db.prepare('INSERT INTO composition_versions (id,composition_id,version,r2_key,size,sha256,note,created_at) VALUES (?,?,?,?,?,?,?,?)').bind(versionId,id,version,key,bytes.byteLength,sha,typeof body.note==='string'?body.note.slice(0,500):null,created).run();
+  const update=await db.prepare('UPDATE compositions SET current_version=?,updated_at=? WHERE id=? AND current_version=? AND archived=0').bind(version,created,id,row.current_version).run();
+  if((update.meta.changes??0)===0){await db.prepare('DELETE FROM composition_versions WHERE id=?').bind(versionId).run();await bucket.delete(key);return c.json(jsonError('Versi berubah di sesi lain. Muat ulang sebelum menyimpan.','VERSION_CONFLICT'),409);}
+ }catch{
+  try{await db.prepare('DELETE FROM composition_versions WHERE id=?').bind(versionId).run();}catch{/* best-effort metadata cleanup */}
+  try{await bucket.delete(key);}catch{/* best-effort object cleanup */}
+  return c.json(jsonError('Versi baru gagal disimpan. Periksa status sebelum mencoba ulang.','VERSION_SAVE_FAILED'),503);
+ }
  return c.json({id:versionId,compositionId:id,version,size:bytes.byteLength,sha256:sha,note:typeof body.note==='string'?body.note.slice(0,500):null,createdAt:created},201);
 });
 routes.get('/compositions/:id/versions/:version/content',async c=>{
