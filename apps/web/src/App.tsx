@@ -1,78 +1,31 @@
-import { useEffect, useState } from 'react';
-import { HealthResponseSchema } from '@byga/contracts';
-
-type ApiState = 'checking' | 'online' | 'offline';
-
-const engines = [
-  { key: 'hyperframes', name: 'HyperFrames', type: 'HTML · CSS · GSAP', description: 'Komposisi video berbasis web.', status: 'Integrasi belum diaktifkan' },
-  { key: 'remotion', name: 'Remotion', type: 'React · Motion', description: 'Video programatik berbasis React.', status: 'Integrasi belum diaktifkan' },
-  { key: 'suara', name: 'Suara', type: 'Audio · Voice', description: 'Generasi audio dan suara.', status: 'Menunggu verifikasi lisensi' }
-] as const;
-
-export default function App() {
-  const [apiState, setApiState] = useState<ApiState>('checking');
-  const [checkedAt, setCheckedAt] = useState<string | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch('/api/v1/health', { signal: controller.signal, headers: { accept: 'application/json' } })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('API unavailable');
-        const payload = HealthResponseSchema.parse(await response.json());
-        setCheckedAt(payload.checkedAt);
-        setApiState(payload.status === 'ok' ? 'online' : 'offline');
-      })
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === 'AbortError') return;
-        setApiState('offline');
-      });
-    return () => controller.abort();
-  }, []);
-
-  return (
-    <main className="app-shell">
-      <aside className="sidebar" aria-label="Navigasi utama">
-        <a className="brand" href="#home" aria-label="BYGA AI Studio beranda">
-          <span className="brand-mark">B</span>
-          <span><strong>BYGA<span className="brand-dot">.</span>AI</strong><small>STUDIO</small></span>
-        </a>
-        <div className="nav-label">WORKSPACE</div>
-        <nav className="nav-list">
-          <a className="nav-item active" href="#overview"><span>◫</span> Overview</a>
-          <span className="nav-item disabled" aria-disabled="true"><span>▦</span> Projects <em>Soon</em></span>
-          <span className="nav-item disabled" aria-disabled="true"><span>▧</span> Asset library <em>Soon</em></span>
-          <span className="nav-item disabled" aria-disabled="true"><span>◷</span> Job center <em>Soon</em></span>
-        </nav>
-        <div className="sidebar-bottom">
-          <div className="workspace-card"><span className="workspace-icon">✳</span><div><strong>Studio workspace</strong><small>Foundation · Phase 1</small></div></div>
-          <div className="sidebar-foot">BUILD ANYWHERE <span>·</span> 0.1.0</div>
-        </div>
-      </aside>
-
-      <section className="main-panel" id="home">
-        <header className="topbar">
-          <div className="breadcrumb">Workspace <span>/</span> <strong>Overview</strong></div>
-          <div className="topbar-right"><span className={`api-pill ${apiState}`}><i />{apiState === 'checking' ? 'Checking API' : apiState === 'online' ? 'API connected' : 'API unavailable'}</span><div className="avatar">B</div></div>
-        </header>
-
-        <div className="content" id="overview">
-          <section className="welcome-row">
-            <div><div className="eyebrow"><span className="eyebrow-line" /> YOUR CREATIVE CONTROL ROOM</div><h1>Build something<br /><span>remarkable.</span></h1><p className="intro">Satu ruang kerja untuk mengelola workflow audio dan video berbantuan AI.</p></div>
-            <div className="welcome-art" aria-hidden="true"><div className="orbit orbit-one" /><div className="orbit orbit-two" /><div className="core-mark">B<span>.</span></div><div className="orbit-node node-one" /><div className="orbit-node node-two" /><div className="orbit-node node-three" /></div>
-          </section>
-
-          <section className="section-block">
-            <div className="section-heading"><div><div className="eyebrow">PLATFORM STATUS</div><h2>Engine connections</h2></div><span className="section-note">Status integrasi aktual</span></div>
-            <div className="engine-grid">{engines.map((engine) => <article className="engine-card" key={engine.key}><div className="engine-card-top"><span className={`engine-symbol ${engine.key}`}>{engine.key === 'hyperframes' ? 'H' : engine.key === 'remotion' ? 'R' : 'S'}</span><span className="pending-dot" /></div><div className="engine-type">{engine.type}</div><h3>{engine.name}</h3><p>{engine.description}</p><div className="engine-status">{engine.status}</div></article>)}</div>
-          </section>
-
-          <section className="foundation-row">
-            <article className="foundation-card"><div className="foundation-icon">⌘</div><div><div className="eyebrow">FOUNDATION</div><h3>Control plane is taking shape.</h3><p>Fondasi API, shared contracts, dan quality gates sedang disiapkan sebelum fitur produksi diaktifkan.</p></div><span className="phase-tag">PHASE 1</span></article>
-            <article className="health-card"><div className="health-head"><span>API HEALTH</span><span className={`health-state ${apiState}`}>{apiState === 'online' ? 'OPERATIONAL' : apiState === 'checking' ? 'CHECKING' : 'UNAVAILABLE'}</span></div><div className="health-value">{apiState === 'online' ? 'Connected' : apiState === 'checking' ? 'Checking…' : 'No connection'}</div><div className="health-foot">{checkedAt ? `Last checked ${new Date(checkedAt).toLocaleTimeString('id-ID')}` : 'Live status from Studio API'}</div></article>
-          </section>
-          <footer className="footer"><span>© 2026 BYGA.AI STUDIO</span><span>BUILD ANYWHERE <b>·</b> BUILT FOR CREATORS</span></footer>
-        </div>
-      </section>
-    </main>
-  );
+import {useCallback,useEffect,useMemo,useState,type FormEvent} from 'react';
+import {AssetSchema,DashboardSummarySchema,EngineInfoSchema,JobSchema,ProjectSchema,type Asset,type DashboardSummary,type EngineInfo,type Job,type Project} from '@byga/contracts';
+type Page='overview'|'projects'|'assets'|'jobs'|'engines';
+const nav:{key:Page;label:string;icon:string}[]=[{key:'overview',label:'Overview',icon:'◫'},{key:'projects',label:'Projects',icon:'▦'},{key:'assets',label:'Assets',icon:'▧'},{key:'jobs',label:'Job center',icon:'◷'},{key:'engines',label:'Engines',icon:'⌘'}];
+const stateLabel:Record<string,string>={queued:'Queued',running:'Running',succeeded:'Succeeded',failed:'Failed',cancelled:'Cancelled',submitted:'Submitted'};
+async function api<T>(path:string,schema:any=null,init?:RequestInit):Promise<T>{const r=await fetch('/api/v1'+path,{...init,headers:{accept:'application/json',...(init?.body?{'content-type':'application/json'}:{}),...init?.headers}});const b=await r.json() as any;if(!r.ok)throw new Error(b.error?.message||'Permintaan gagal.');return schema?schema.parse(b):b as T;}
+const listSchema=(schema:any)=>({parse:(v:unknown)=>(v as unknown[]).map(x=>schema.parse(x))});
+const date=(v:string)=>new Date(v).toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'});
+const size=(v:number)=>v<1024?v+' B':v<1048576?(v/1024).toFixed(1)+' KB':(v/1048576).toFixed(1)+' MB';
+export default function App(){
+const [page,setPage]=useState<Page>('overview'),[online,setOnline]=useState(false),[projects,setProjects]=useState<Project[]>([]),[assets,setAssets]=useState<Asset[]>([]),[jobs,setJobs]=useState<Job[]>([]),[engines,setEngines]=useState<EngineInfo[]>([]),[summary,setSummary]=useState<DashboardSummary|null>(null),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false);
+const [projectName,setProjectName]=useState(''),[assetProject,setAssetProject]=useState(''),[assetName,setAssetName]=useState(''),[assetMime,setAssetMime]=useState('image/png'),[assetSize,setAssetSize]=useState('1024'),[jobProject,setJobProject]=useState(''),[jobEngine,setJobEngine]=useState('remotion'),[operation,setOperation]=useState('render');
+const refresh=useCallback(async()=>{try{const [p,a,j,e,d]=await Promise.all([api<Project[]>('/projects',listSchema(ProjectSchema)),api<Asset[]>('/assets',listSchema(AssetSchema)),api<Job[]>('/jobs',listSchema(JobSchema)),api<EngineInfo[]>('/engines',listSchema(EngineInfoSchema)),api<DashboardSummary>('/dashboard',DashboardSummarySchema)]);setProjects(p);setAssets(a);setJobs(j);setEngines(e);setSummary(d);setOnline(true);setAssetProject(x=>x||p.find(v=>!v.archived)?.id||'');setJobProject(x=>x||p.find(v=>!v.archived)?.id||'');}catch{setOnline(false);}},[]);
+useEffect(()=>{void api('/health').then(()=>refresh()).catch(()=>setOnline(false));},[refresh]);
+const active=useMemo(()=>projects.filter(p=>!p.archived),[projects]);
+const flash=(s:string)=>{setNotice(s);window.setTimeout(()=>setNotice(''),3500);};
+async function act(fn:()=>Promise<unknown>,message:string){setBusy(true);try{await fn();await refresh();flash(message);}catch(e){flash(e instanceof Error?e.message:'Terjadi kesalahan.');}finally{setBusy(false);}}
+function createProject(e:FormEvent){e.preventDefault();if(!projectName.trim())return;void act(()=>api('/projects',null,{method:'POST',body:JSON.stringify({name:projectName})}),'Project dibuat.');setProjectName('');}
+function createAsset(e:FormEvent){e.preventDefault();void act(()=>api('/assets',null,{method:'POST',body:JSON.stringify({projectId:assetProject,name:assetName,mimeType:assetMime,size:Number(assetSize),type:assetMime.startsWith('image/')?'image':assetMime.startsWith('audio/')?'audio':assetMime.startsWith('video/')?'video':'other'})}),'Metadata asset ditambahkan.');setAssetName('');}
+function createJob(e:FormEvent){e.preventDefault();void act(()=>api('/jobs',null,{method:'POST',body:JSON.stringify({projectId:jobProject,engine:jobEngine,operation,input:{source:'studio-demo'}})}),'Mock job masuk antrean.');}
+return <main className="app-shell"><aside className="sidebar"><a className="brand" href="#home" onClick={()=>setPage('overview')}><span className="brand-mark">B</span><span><strong>BYGA<span>.</span>AI</strong><small>STUDIO</small></span></a><div className="nav-label">WORKSPACE</div><nav className="nav-list" aria-label="Navigasi utama">{nav.map(n=><button key={n.key} className={'nav-item '+(page===n.key?'active':'')} onClick={()=>setPage(n.key)}><span>{n.icon}</span>{n.label}{n.key==='jobs'&&jobs.some(j=>['queued','running'].includes(j.state))?<em>●</em>:null}</button>)}</nav><div className="sidebar-bottom"><div className="workspace-card"><span className="workspace-icon">✳</span><div><strong>Studio workspace</strong><small>Phase 2 · Mock mode</small></div></div><div className="sidebar-foot">BUILD ANYWHERE · 0.2.0</div></div></aside>
+<section className="main-panel"><header className="topbar"><div className="breadcrumb">Workspace <span>/</span> <strong>{nav.find(n=>n.key===page)?.label}</strong></div><div className="topbar-right"><span className={'api-pill '+(online?'online':'offline')}><i/>{online?'Studio API online':'API unavailable'}</span><span className="mode-pill">MOCK MODE</span><div className="avatar">B</div></div></header><div className="content">{notice&&<div className="notice" role="status">{notice}<button onClick={()=>setNotice('')}>×</button></div>}
+{page==='overview'&&<><section className="welcome-row"><div><div className="eyebrow"><span className="eyebrow-line"/> CREATIVE CONTROL ROOM</div><h1>Make ideas<br/><span>move forward.</span></h1><p className="intro">Satu workspace untuk project, assets, dan workflow produksi AI audio-video.</p><div className="hero-actions"><button onClick={()=>setPage('projects')}>Explore projects ↗</button><button className="secondary-button" onClick={()=>setPage('jobs')}>Create mock job</button></div></div><div className="welcome-art" aria-hidden="true"><div className="orbit orbit-one"/><div className="orbit orbit-two"/><div className="core-mark">B<span>.</span></div><i className="orbit-node node-one"/><i className="orbit-node node-two"/><i className="orbit-node node-three"/></div></section><section className="metrics-grid">{[{label:'Active projects',value:summary?.activeProjects??'—',icon:'▦',to:'projects' as Page},{label:'Assets tracked',value:summary?.assets??'—',icon:'▧',to:'assets' as Page},{label:'Total jobs',value:summary?.jobs??'—',icon:'◷',to:'jobs' as Page},{label:'Running jobs',value:summary?.runningJobs??'—',icon:'↗',to:'jobs' as Page}].map(m=><button className="metric-card" key={m.label} onClick={()=>setPage(m.to)}><span className="metric-icon">{m.icon}</span><span className="metric-label">{m.label}</span><strong>{m.value}</strong><small>View details ↗</small></button>)}</section><section className="overview-columns"><div className="panel-block"><div className="section-heading"><div><div className="eyebrow">RECENT ACTIVITY</div><h2>Latest jobs</h2></div><button className="text-button" onClick={()=>setPage('jobs')}>View all ↗</button></div>{jobs.slice(0,4).map(j=><div className="activity-row" key={j.id}><span className="activity-icon">{j.engine[0].toUpperCase()}</span><div><strong>{j.operation}</strong><small>{j.engine} · {date(j.updatedAt)}</small></div><span className={'state-chip '+j.state}>{stateLabel[j.state]}</span></div>)}{!jobs.length&&<Empty title="No activity yet" text="Mock job akan muncul di sini."/>}</div><div className="panel-block"><div className="section-heading"><div><div className="eyebrow">ENGINE REGISTRY</div><h2>Connections</h2></div><button className="text-button" onClick={()=>setPage('engines')}>Details ↗</button></div>{engines.map(e=><div className="engine-row" key={e.key}><span className={'engine-mini '+e.key}>{e.name[0]}</span><div><strong>{e.name}</strong><small>{e.mode==='mock'?'Mock adapter enabled':'Provider inactive'}</small></div><span className={'engine-status-chip '+e.status}>{e.status}</span></div>)}</div></section><div className="mock-banner"><span>ⓘ</span><div><strong>Mock environment</strong><p>Data sementara di memori Worker. Tidak ada file diunggah dan tidak ada permintaan ke provider eksternal.</p></div><span className="mode-pill">PHASE 2</span></div></>}
+{page==='projects'&&<section className="page-section"><Heading eyebrow="WORKSPACE" title="Projects" text="Buat dan kelola ruang kerja untuk setiap produksi."/><form className="create-bar" onSubmit={createProject}><input value={projectName} onChange={e=>setProjectName(e.target.value)} placeholder="Nama project baru…" maxLength={80}/><button disabled={busy||!projectName.trim()}>Create project ＋</button></form><div className="list-grid">{active.map(p=><article className="data-card project-card" key={p.id}><span className="card-icon">▦</span><div className="card-main"><h3>{p.name}</h3><p>Dibuat {date(p.createdAt)}</p><small>{assets.filter(a=>a.projectId===p.id).length} assets · {jobs.filter(j=>j.projectId===p.id).length} jobs</small></div><button className="quiet-button" onClick={()=>{setJobProject(p.id);setPage('jobs');}}>Open workflow</button><button className="icon-button" disabled={busy} onClick={()=>void act(()=>api('/projects/'+p.id,null,{method:'PATCH',body:JSON.stringify({name:window.prompt('Nama project',p.name)||p.name})}),'Project diperbarui.')} aria-label="Rename project">✎</button><button className="icon-button" disabled={busy} onClick={()=>void act(()=>api('/projects/'+p.id,null,{method:'DELETE'}),'Project diarsipkan.')} aria-label="Archive project">⌑</button></article>)}{!active.length&&<Empty title="Belum ada project" text="Buat project pertama untuk memulai."/>}</div></section>}
+{page==='assets'&&<section className="page-section"><Heading eyebrow="LIBRARY" title="Asset library" text="Daftarkan metadata file. Upload file belum diaktifkan."/><form className="form-panel" onSubmit={createAsset}><label>Project<select value={assetProject} onChange={e=>setAssetProject(e.target.value)} required><option value="">Pilih project</option>{active.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label>Nama file<input value={assetName} onChange={e=>setAssetName(e.target.value)} placeholder="cover.png" required/></label><label>MIME type<input value={assetMime} onChange={e=>setAssetMime(e.target.value)} required/></label><label>Ukuran (bytes)<input type="number" min="1" max="26214400" value={assetSize} onChange={e=>setAssetSize(e.target.value)} required/></label><button disabled={busy||!assetProject}>Add metadata ＋</button></form><div className="table-wrap"><table><thead><tr><th>Asset</th><th>Project</th><th>Type</th><th>Size</th><th>Added</th><th/></tr></thead><tbody>{assets.map(a=><tr key={a.id}><td><strong>{a.name}</strong><small>{a.mimeType}</small></td><td>{projects.find(p=>p.id===a.projectId)?.name||'—'}</td><td><span className="type-chip">{a.type}</span></td><td>{size(a.size)}</td><td>{date(a.createdAt)}</td><td><button className="text-button danger" onClick={()=>void act(()=>api('/assets/'+a.id,null,{method:'DELETE'}),'Metadata dihapus.')}>Remove</button></td></tr>)}{!assets.length&&<tr><td colSpan={6} className="empty-cell">Belum ada metadata asset.</td></tr>}</tbody></table></div></section>}
+{page==='jobs'&&<section className="page-section"><Heading eyebrow="ORCHESTRATION" title="Job center" text="Uji antrean dan transisi status tanpa menghubungi engine eksternal."/><form className="form-panel job-form" onSubmit={createJob}><label>Project<select value={jobProject} onChange={e=>setJobProject(e.target.value)} required><option value="">Pilih project</option>{active.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label>Engine<select value={jobEngine} onChange={e=>setJobEngine(e.target.value)}>{engines.filter(e=>e.status==='mock-ready').map(e=><option key={e.key} value={e.key}>{e.name} · Mock</option>)}</select></label><label>Operation<input value={operation} onChange={e=>setOperation(e.target.value)} maxLength={80} required/></label><button disabled={busy||!jobProject}>Create mock job ＋</button></form><div className="job-list">{jobs.map(j=><article className="data-card job-card" key={j.id}><span className="job-engine">{j.engine[0].toUpperCase()}</span><div className="card-main"><div className="job-title"><h3>{j.operation}</h3><span className={'state-chip '+j.state}>{stateLabel[j.state]}</span></div><p>{projects.find(p=>p.id===j.projectId)?.name||'Project'} · {j.engine}</p><small>{date(j.createdAt)} · {j.id}</small>{j.output&&<div className="mock-output">Mock output: <code>{j.output.reference}</code></div>}</div>{['queued','running'].includes(j.state)&&<button className="primary-small" disabled={busy} onClick={()=>void act(()=>api('/jobs/'+j.id+'/advance',null,{method:'POST'}),j.state==='queued'?'Job running.':'Mock job selesai.')}>{j.state==='queued'?'Start mock':'Complete mock'}</button>}</article>)}{!jobs.length&&<Empty title="Belum ada job" text="Buat mock job untuk mencoba lifecycle."/>}</div></section>}
+{page==='engines'&&<section className="page-section"><Heading eyebrow="INTEGRATIONS" title="Engine registry" text="Status adapter Studio, bukan pemeriksaan live ke provider."/><div className="engine-grid">{engines.map(e=><article className="engine-card" key={e.key}><div className="engine-card-top"><span className={'engine-symbol '+e.key}>{e.name[0]}</span><span className={'engine-status-chip '+e.status}>{e.status}</span></div><div className="engine-type">{e.mode==='mock'?'SIMULATION ADAPTER':'PROVIDER ADAPTER'}</div><h3>{e.name}</h3><p>{e.description}</p><div className="capability-list">{e.capabilities.length?e.capabilities.map(c=><span key={c}>{c}</span>):<span>No enabled capabilities</span>}</div></article>)}</div></section>}
+<footer className="footer"><span>© 2026 BYGA.AI STUDIO</span><span>MOCK MODE · NO PROVIDER REQUESTS</span></footer></div></section></main>;
 }
+function Heading({eyebrow,title,text}:{eyebrow:string;title:string;text:string}){return <div className="page-heading"><div className="eyebrow">{eyebrow}</div><h1>{title}</h1><p>{text}</p></div>;}
+function Empty({title,text}:{title:string;text:string}){return <div className="empty-state"><span>✳</span><strong>{title}</strong><p>{text}</p></div>;}
